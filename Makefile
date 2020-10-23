@@ -3,10 +3,10 @@
 #    Makefile
 #
 # Description:
-#    Template Driver Makefile
+#    Helcity Decoder Driver Makefile
 #
 #
-BASENAME=template
+BASENAME=hd
 #
 # Uncomment DEBUG line, to include some debugging info ( -g and -Wall)
 DEBUG	?= 1
@@ -44,7 +44,8 @@ DEFS			= -mcpu=604 -DCPU=PPC604 -DVXWORKS -D_GNU_TOOL -mlongcall \
 INCS			= -I. -I$(VXWORKS_ROOT)/h  \
 				$(VME_INCLUDE) ${INC_CODA}
 CFLAGS			= $(INCS) $(DEFS)
-
+else
+OS			= LINUX
 endif
 
 # Check for CODA environment
