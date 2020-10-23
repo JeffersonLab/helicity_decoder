@@ -105,11 +105,31 @@ typedef struct hd_struct
 #define HD_TRIGGER_LATENCY_STATUS (1 << 31)
 
 
+/* 0x20 helicity_config1 */
+#define HD_HELICITY_CONFIG1_PATTERN_MASK         0x00000003
+#define HD_HELICITY_CONFIG1_PATTERN_PAIR         0
+#define HD_HELICITY_CONFIG1_PATTERN_QUARTET      1
+#define HD_HELICITY_CONFIG1_PATTERN_OCTET        2
+#define HD_HELICITY_CONFIG1_PATTERN_TOGGLE       3
+#define HD_HELICITY_CONFIG1_HELICITY_DELAY_MASK  0x0000FF00
+#define HD_HELICITY_CONFIG1_HELICITY_SETTLE_MASK 0xFFFF0000
 
-/* 0x30-0x3C control scaler Index definitions */
+/* 0x24 helicity_config2 */
+#define HD_HELICITY_CONFIG2_STABLE_TIME_MASK 0x00FFFFFF
+
+/* 0x28 helicity_config3 */
+#define HD_HELICITY_CONFIG2_PSEUDO_SEED_MASK 0x3FFFFFFF
+
+/* 0x30-0x38 control scaler Index definitions */
 #define HD_CONTROL_SCALER_TRIG1     0
 #define HD_CONTROL_SCALER_TRIG2     1
 #define HD_CONTROL_SCALER_SYNCRESET 2
+
+/* 0x3c events_on_board mask */
+#define HD_EVENTS_ON_BOARD_MASK 0x00FFFFFF
+
+/* 0x40 blocks_on_board mask */
+#define HD_BLOCKS_ON_BOARD_MASK 0x000FFFFF
 
 /* 0x44-0x54 scaler Index definitions */
 #define HD_HELICITY_SCALER_TSTABLE_RISING    0
@@ -118,6 +138,22 @@ typedef struct hd_struct
 #define HD_HELICITY_SCALER_PAIR_SYNC         3
 #define HD_HELICITY_SCALER_HELICITY_WINDOWS  4
 
+/* 0x58 recovered_shift_reg masks */
+#define HD_RECOVERED_SHIFT_REG_MASK 0x3FFFFFFF
+
+/* 0x58 generator_shift_reg masks */
+#define HD_GENERATOR_SHIFT_REG_MASK 0x3FFFFFFF
+
+/* 0x78 firmware_csr bits and masks */
+#define HD_FIRMWARE_CSR_LAST_VALID_READ_MASK 0x000000FF
+#define HD_FIRMWARE_CSR_BUSY                 (1 << 8)
+#define HD_FIRMWARE_CSR_SECTOR_ERASE         (1 << 29)
+#define HD_FIRMWARE_CSR_BULK_ERASE           (1 << 30)
+#define HD_FIRMWARE_CSR_WRITE_ENABLE         (1 << 31)
+
+/* 0x80 firmware_data bits and masks */
+#define HD_FIRMWARE_DATA_WRITE_MASK   0x000000FF
+#define HD_FIRMWARE_DATA_ADDRESS_MASK 0xFFFFFF00
 
 /* Supported Firmware Version */
 #define HD_SUPPORTED_FIRMWARE  0x0000
