@@ -118,7 +118,7 @@ install: $(LIBS)
 endif
 
 clean:
-	@rm -vf ${BASENAME}Lib.{o,d} lib${BASENAME}.{a,so}
+	@rm -vf ${BASENAME}Lib.{o,d} lib${BASENAME}.{a,so} *.d.* *~
 
 echoarch:
 	@echo "Make for $(OS)-$(ARCH)"

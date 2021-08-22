@@ -1,0 +1,16 @@
+#+TITLE: Driver library for the JLab Helicity Decoder
+
+Authors:
+- Bryan Moffit and Ed Jastrzembski
+- TJNAF Fast Electronics and Data Acquisition
+
+* What is this for?
+
+  This is the library for the JLab Helicity Decoder.
+
+  It is in development, and may require a tweak or two.
+
+* What do I do with it?
+
+  Use it with [[https://github.com/JeffersonLab/jvme][jvme]] to control and readout a [[https://coda.jlab.org/drupal/system/files/pdfs/HardwareManual/HelicityDecoder/Programming%20the%20Helicity%20Decoder%20Module%20V5.pdf][JLab Helicity Decoder]]
+
