@@ -13,22 +13,32 @@ typedef struct hd_struct
   /* 0x0008 */ volatile uint32_t ctrl1;
   /* 0x000C */ volatile uint32_t ctrl2;
   /* 0x0010 */ volatile uint32_t adr32;
-  /* 0x0014 */ volatile uint32_t interrupt;
-  /* 0x0018 */ volatile uint32_t blocklevel;
-  /* 0x001C */ volatile uint32_t trigger_latency;
-  /* 0x0020 */ volatile uint32_t helicity_config1;
-  /* 0x0024 */ volatile uint32_t helicity_config2;
-  /* 0x0028 */ volatile uint32_t helicity_config3;
+  /* 0x0014 */ volatile uint32_t intr;
+  /* 0x0018 */ volatile uint32_t blk_size;
+  /* 0x001C */ volatile uint32_t delay;
+  /* 0x0020 */ volatile uint32_t gen_config1;
+  /* 0x0024 */ volatile uint32_t gen_config2;
+  /* 0x0028 */ volatile uint32_t gen_config3;
   /* 0x002C          */ uint32_t _blank0;
-  /* 0x0030 */ volatile uint32_t control_scaler[3];
-  /* 0x003C */ volatile uint32_t events_on_board;
-  /* 0x0040 */ volatile uint32_t blocks_on_board;
-  /* 0x0044 */ volatile uint32_t helicity_scaler[5];
+  /* 0x0030 */ volatile uint32_t trig1_scaler;
+  /* 0x0034 */ volatile uint32_t trig2_scaler;
+  /* 0x0038 */ volatile uint32_t sync_scaler;
+  /* 0x003C */ volatile uint32_t evt_count;
+  /* 0x0040 */ volatile uint32_t blk_count;
+
+  /* 0x0044 */ volatile uint32_t helicity_scaler[4];
+  /* 0x0054 */ volatile uint32_t clk125_test;
   /* 0x0058 */ volatile uint32_t recovered_shift_reg;
   /* 0x005C */ volatile uint32_t generator_shift_reg;
-  /* 0x0060 */ volatile uint32_t spare[(0x78 - 0x60) >> 2];
-  /* 0x0078 */ volatile uint32_t firmware_csr;
-  /* 0x007C */ volatile uint32_t firmware_data;
+  /* 0x0060 */ volatile uint32_t latency_confirm;
+  /* 0x0064 */ volatile uint32_t delay_confirm;
+
+  /* 0x0068 */ volatile uint32_t helicity_history1;
+  /* 0x006C */ volatile uint32_t helicity_history2;
+  /* 0x0070 */ volatile uint32_t helicity_history3;
+  /* 0x0074 */ volatile uint32_t helicity_history4;
+
+  /* 0x0078 */ volatile uint32_t spare;
 } HD;
 
 /* 0x0 version bits and masks */
@@ -60,25 +70,28 @@ typedef struct hd_struct
 
 /* 0x8 ctrl1 bits and masks */
 #define HD_CTRL1_CLK_SRC_MASK        0x00000003
-#define HD_CTRL1_CLK_SRC_P0          0
-#define HD_CTRL1_CLK_SRC_FP          1
-#define HD_CTRL1_CLK_SRC_FP2         2
-#define HD_CTRL1_CLK_SRC_INT         3
+#define HD_CTRL1_CLK_SRC_P0          (0 << 0)
+#define HD_CTRL1_CLK_SRC_FP          (1 << 0)
+#define HD_CTRL1_CLK_SRC_FP2         (2 << 0)
+#define HD_CTRL1_CLK_SRC_INT         (3 << 0)
 #define HD_CTRL1_INT_CLK_ENABLE      (1 << 2)
 #define HD_CTRL1_TRIG_SRC_MASK       0x00000018
-#define HD_CTRL1_TRIG_SRC_P0         0
-#define HD_CTRL1_TRIG_SRC_FP         1
-#define HD_CTRL1_TRIG_SRC_FP2        2
-#define HD_CTRL1_TRIG_SRC_SOFT       3
+#define HD_CTRL1_TRIG_SRC_P0         (0 << 3)
+#define HD_CTRL1_TRIG_SRC_FP         (1 << 3)
+#define HD_CTRL1_TRIG_SRC_FP2        (2 << 3)
+#define HD_CTRL1_TRIG_SRC_SOFT       (3 << 3)
 #define HD_CTRL1_SYNC_RESET_SRC_MASK 0x00000060
-#define HD_CTRL1_SYNC_RESET_SRC_P0   0
-#define HD_CTRL1_SYNC_RESET_SRC_FP   1
-#define HD_CTRL1_SYNC_RESET_SRC_FP2  2
-#define HD_CTRL1_SYNC_RESET_SRC_SOFT 3
+#define HD_CTRL1_SYNC_RESET_SRC_P0   (0 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_FP   (1 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_FP2  (2 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_SOFT (3 << 5)
 #define HD_CTRL1_SOFT_CONTROL_ENABLE (1 << 7)
 #define HD_CTRL1_INT_ENABLE          (1 << 16)
 #define HD_CTRL1_BERR_ENABLE         (1 << 17)
+#define HD_CTRL1_HEL_SRC_MASK        0x001c0000
 #define HD_CTRL1_USE_INT_HELICITY    (1 << 18)
+#define HD_CTRL1_USE_EXT_CU_IN       (1 << 19)
+#define HD_CTRL1_INT_HELICITY_TO_FP  (1 << 20)
 
 /* 0xC ctrl2 bits and masks */
 #define HD_CTRL2_DECODER_ENABLE      (1 << 0)
@@ -89,7 +102,7 @@ typedef struct hd_struct
 
 /* 0x10 adr32 bits and masks */
 #define HD_ADR32_ENABLE    (1 << 0)
-#define HD_ADR32_BASE_MASK 0x0000FF00
+#define HD_ADR32_BASE_MASK 0x0000FF80
 
 /* 0x14 interrupt bits and masks */
 #define HD_INT_VEC_MASK         0x000000FF
@@ -161,10 +174,19 @@ typedef struct hd_struct
 /* hdInit initialization flags */
 #define HD_INIT_IGNORE_FIRMWARE (1 << 0)
 #define HD_INIT_NO_INIT         (1 << 1)
+#define HD_INIT_INTERNAL        0
+#define HD_INIT_FP              1
+#define HD_INIT_VXS             2
 
 /* function prototypes */
 
 int32_t hdCheckAddresses();
-int32_t hdInit(uint32_t vAddr, uint32_t iFlag);
+int32_t hdInit(uint32_t vAddr, uint8_t source, uint32_t iFlag);
 uint32_t hdFind();
+int32_t hdStatus(int pflag);
+int32_t hdReset();
+int32_t hdSetA32(uint32_t a32base);
+int32_t hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc);
+int32_t hdSetHelicitySource(uint8_t helSrc, uint8_t input, uint8_t output);
+
 #endif /* __HDLIBH__ */

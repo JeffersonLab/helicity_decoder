@@ -48,14 +48,6 @@ else
 OS			= LINUX
 endif
 
-# Check for CODA environment
-ifdef CODA_VME
-
-INC_CODA	= -I${CODA_VME}/include
-LIB_CODA	= -L${CODA_VME_LIB}
-
-endif
-
 # Defs and build for i686, x86_64 Linux
 ifeq ($(OS),LINUX)
 
@@ -76,7 +68,7 @@ LIBS			= lib${BASENAME}.a lib${BASENAME}.so
 endif #OS=LINUX#
 
 ifdef DEBUG
-CFLAGS			+= -Wall -g
+CFLAGS			+= -Wall -g -Wno-unused
 else
 CFLAGS			+= -O2
 endif
