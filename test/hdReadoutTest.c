@@ -68,11 +68,12 @@ main(int argc, char *argv[])
 
   hdStatus(1);
 
-  hdSync(1);
   hdEnable();
-
+  hdSync(1);
+  sleep(1);
   hdTrig(1);
 
+  hdStatus(1);
   int timeout=0;
   while((hdBReady(0)!=1) && (timeout<100))
     {
@@ -107,8 +108,9 @@ main(int argc, char *argv[])
   printf("  dCnt = %d\n",dCnt);
   for(idata=0;idata<dCnt;idata++)
     {
-      if((idata%5)==0) printf("\n\t");
-      printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata]));
+      hdDecodeData(LSWAP(outEvent->data[idata]));
+      /* if((idata%5)==0) printf("\n\t"); */
+      /* printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata])); */
     }
   printf("\n\n");
 

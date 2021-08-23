@@ -182,7 +182,7 @@ typedef struct hd_struct
 #define HD_DATA_BLOCK_TRAILER     0x08000000
 
 /* Supported Firmware Version */
-#define HD_SUPPORTED_FIRMWARE  0x0000
+#define HD_SUPPORTED_FIRMWARE  0x01
 
 /* hdInit initialization flags */
 #define HD_INIT_IGNORE_FIRMWARE (1 << 0)
@@ -202,6 +202,7 @@ uint32_t hdFind();
 int32_t hdStatus(int pflag);
 int32_t hdReset(uint8_t type, uint8_t clearA32);
 int32_t hdSetA32(uint32_t a32base);
+uint32_t hdGetA32();
 int32_t hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc);
 int32_t hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc);
 int32_t hdSetHelicitySource(uint8_t helSrc, uint8_t input, uint8_t output);
@@ -212,6 +213,9 @@ int32_t hdGetBlocklevel();
 int32_t hdSetProcDelay(uint16_t dataInputDelay, uint16_t triggerLatencyDelay);
 int32_t hdGetProcDelay(uint16_t *dataInputDelay, uint16_t *triggerLatencyDelay);
 int32_t hdConfirmProcDelay(uint8_t pflag);
+
+int32_t hdSetBERR(uint8_t enable);
+int32_t hdGetBERR(uint8_t enable);
 
 int32_t hdEnable();
 int32_t hdDisable();
@@ -226,6 +230,8 @@ int32_t hdBusyStatus(uint8_t *latched);
 
 int32_t hdReadBlock(volatile unsigned int *data, int nwrds, int rflag);
 int32_t hdReadScalers(volatile unsigned int *data, int rflag);
+int32_t hdPrintScalers();
+
 int32_t hdReadHelicityHistory(volatile unsigned int *data);
 
 int32_t hdGetRecoveredShiftRegisterValue(uint32_t *recovered, uint32_t *internalGenerator);
@@ -239,7 +245,7 @@ int32_t hdHelicityGeneratorConfig(uint8_t pattern, uint8_t windowDelay,
 int32_t hdGetHelicityGeneratorConfig(uint8_t *pattern, uint8_t *windowDelay,
 				     uint16_t *settleTime, uint32_t *stableTime,
 				     uint32_t *seed);
-
-
+int32_t hdPrintHelicityGeneratorConfig();
+void hdDecodeData(uint32_t data);
 
 #endif /* __HDLIBH__ */

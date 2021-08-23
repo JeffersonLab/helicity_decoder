@@ -278,8 +278,8 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
      data delay = 0x100 (256 x 8 ns = 2048 ns) */
   hdSetProcDelay(0x100, 0x40);
 
-  hdReset(0, 0);
-
+  /* Enable BERR */
+  hdSetBERR(1);
 
   return OK;
 }
@@ -368,34 +368,40 @@ hdStatus(int pflag)
   READHD(adr32);
   READHD(blk_size);
   READHD(delay);
+  READHD(intr);
   HUNLOCK;
 
 #ifndef PREG
 #define PREG(_off, _reg)						\
-      printf("  %18.18s (0x%04lx) = 0x%08x%s",				\
+      printf("  %10.18s (0x%04lx) = 0x%08x%s",				\
 	     #_reg, (unsigned long)&rv._reg - (unsigned long)&rv, rv._reg, \
 	     #_off);
 #endif
+
+  printf("\n");
+  printf("--------------------------------------------------------------------------------\n");
+  printf("STATUS for JLab Helicity Decoder\n");
   if(pflag)
     {
+      printf("\n");
       PREG(\t,version);
       PREG(\n,csr);
       PREG(\t,ctrl1);
       PREG(\n,ctrl2);
       PREG(\t,adr32);
-      PREG(\n,blk_size);
+      PREG(\n,intr);
+      PREG(\t,blk_size);
       PREG(\n,delay);
     }
 
   printf("\n");
-  printf("STATUS for JLab Helicity Decoder\n");
-  printf("--------------------------------------------------------------------------------\n");
-  printf("Slot    Type     Rev      FW         A24           A32\n");
-  printf("--------------------------------------------------------------------------------\n");
+  printf("  Slot    Type     Rev      FW         A24           A32\n");
+  printf("  ------------------------------------------------------------------------------\n");
+  /*
+   *     "   0    0xdec0    0x01    0x01    0xed0000    0x09000000"
+   */
 
-  //  printf("20    0x1234    0x12    0x12    0x123456    0x12345678\n");
-
-  printf("%2d    ", (rv.intr & HD_INT_GEO_MASK) >> 16);
+  printf("  %2d    ", (rv.intr & HD_INT_GEO_MASK) >> 16);
 
   printf("0x%04x    ", (rv.version & HD_VERSION_BOARD_TYPE_MASK) >> 16);
   printf("0x%02x    ", (rv.version & HD_VERSION_BOARD_REV_MASK) >> 8);
@@ -404,7 +410,7 @@ hdStatus(int pflag)
   if(rv.adr32 & HD_ADR32_ENABLE)
     printf("0x%08x", (rv.adr32 & HD_ADR32_BASE_MASK) << 16);
   else
-    printf("DISABLED");
+    printf("  disabled");
   printf("\n");
 
 
@@ -412,13 +418,14 @@ hdStatus(int pflag)
   printf("                         Configuration\n\n");
 
 
-  printf(".Signal Sources..    .Helicity Src.  Block    Processing Delay \n");
-  printf("Clk   Trig   Sync    Input   Output  Level    Trigger     Data \n");
-  printf("--------------------------------------------------------------------------------\n");
-  //  printf("INT    INT    INT    COPPER     EXT    255    4095       4095\n");
-  printf("\n");
+  printf("  .Signal Sources..    .Helicity Src.  Block    .Processing Delay. \n");
+  printf("  Clk   Trig   Sync    Input   Output  Level        Trigger   Data \n");
+  printf("  ------------------------------------------------------------------------------\n");
+  /*
+   *     "  INT    INT    INT    FIBER     INT       1             64    256"
+   */
 
-  printf("%s    ",
+  printf("  %s    ",
 	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_P0 ? "VXS" :
 	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_FP ? " FP" :
 	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_FP2 ? "FP2" :
@@ -438,54 +445,59 @@ hdStatus(int pflag)
 	 "INT" : "???");
 
   printf("%s    ",
-	 (rv.ctrl1 & HD_CTRL1_HEL_SRC_MASK) == HD_CTRL1_USE_INT_HELICITY ? "   INT" :
+	 (rv.ctrl1 & HD_CTRL1_USE_INT_HELICITY) ? "INT   " :
 	 (rv.ctrl1 & HD_CTRL1_HEL_SRC_MASK) == HD_CTRL1_USE_EXT_CU_IN ? "COPPER" :
-	 " FIBER");
+	 "FIBER ");
 
-  printf("%s    ",
+  printf("%s     ",
 	 (rv.ctrl1 & HD_CTRL1_INT_HELICITY_TO_FP) ? "INT" : "EXT");
 
-  printf("%3d    ",
+  printf("%3d           ",
 	 rv.blk_size & HD_BLOCKLEVEL_MASK);
 
-  printf("%4d       ",
+  printf("%4d   ",
 	 rv.delay & HD_DELAY_TRIGGER_MASK);
 
   printf("%4d",
 	   (rv.delay & HD_DELAY_DATA_MASK) >> 16);
   printf("\n");
-
-
-  printf("                                   Helicity\n");
-  printf(" Decoder    Triggers    EvtBuild   Generator  Force Busy\n");
-  printf("--------------------------------------------------------------------------------\n");
-  //  printf("Disabled    Disabled    Disabled    Disabled    Disabled\n");
   printf("\n");
 
-  printf("%s    ",
-	 rv.ctrl2 & HD_CTRL2_DECODER_ENABLE ? " ENABLED" : "Disabled");
+
+  printf("                          Event       Helicity    Force\n");
+  printf("  Decoder     Triggers    Build       Generator   Busy\n");
+  printf("  ------------------------------------------------------------------------------\n");
+  /*
+   *     "  Disabled    Disabled    Disabled    Disabled    Disabled"
+  */
+
+  printf("  %s    ",
+	 rv.ctrl2 & HD_CTRL2_DECODER_ENABLE ? "ENABLED " : "Disabled");
 
   printf("%s    ",
-	 rv.ctrl2 & HD_CTRL2_GO ? " ENABLED" : "Disabled");
+	 rv.ctrl2 & HD_CTRL2_GO ? "ENABLED " : "Disabled");
 
   printf("%s    ",
-	 rv.ctrl2 & HD_CTRL2_EVENT_BUILD_ENABLE ? " ENABLED" : "Disabled");
+	 rv.ctrl2 & HD_CTRL2_EVENT_BUILD_ENABLE ? "ENABLED " : "Disabled");
 
   printf("%s    ",
-	 rv.ctrl2 & HD_CTRL2_INT_HELICITY_ENABLE ? " ENABLED" : "Disabled");
+	 rv.ctrl2 & HD_CTRL2_INT_HELICITY_ENABLE ? "ENABLED " : "Disabled");
 
   printf("%s    ",
-	 rv.ctrl2 & HD_CTRL2_FORCE_BUSY ? " ENABLED" : "Disabled");
-
-  printf("                         Status\n\n");
-  printf("                                                             Int Buff\n");
-  printf("Helicity   ...Block Data..       Event             Latch     ..Empty.\n");
-  printf("Sequence   Accepted  Ready      Buffer  BERR  BUSY  BUSY      0     1\n");
-  printf("--------------------------------------------------------------------------------\n");
-  //  printf("   ERROR        YES    YES    NotEmpty    HI    LO    HI    Yes   Yes\n");
+	 rv.ctrl2 & HD_CTRL2_FORCE_BUSY ? "ENABLED " : "Disabled");
   printf("\n");
 
-  printf("   %s        ",
+  printf("\n");
+  printf("                         Status\n");
+  printf("                                                               Int Buff\n");
+  printf("  Helicity   ...Block Data..       Event             Latch     ..Empty.\n");
+  printf("  Sequence   Accepted  Ready      Buffer  BERR  BUSY  BUSY      0     1\n");
+  printf("  ------------------------------------------------------------------------------\n");
+  /*
+   *     "        OK        ---    ---       Empty    lo    lo    lo    YES    YES"
+   */
+
+  printf("     %s        ",
 	 rv.csr & HD_CSR_HELICITY_SEQ_ERROR ? "ERROR" : "   OK");
 
   printf("%s    ",
@@ -494,13 +506,13 @@ hdStatus(int pflag)
   printf("%s    ",
 	 rv.csr & HD_CSR_BLOCK_READY ? "YES" : "---");
 
-  printf("%s    ",
+  printf("%s   ",
 	 rv.csr & HD_CSR_EMPTY ? "   Empty" : "NotEmpty");
 
-  printf("%s    ",
+  printf("%s   ",
 	 rv.csr & HD_CSR_BERR_ASSERTED ? " HI" : " lo");
 
-  printf("%s    ",
+  printf("%s   ",
 	 rv.csr & HD_CSR_BUSY ? " HI" : " lo");
 
   printf("%s    ",
@@ -511,6 +523,12 @@ hdStatus(int pflag)
 
   printf("%s",
 	 rv.csr & HD_CSR_INTERNAL_BUF1 ? "YES" : "---");
+  printf("\n");
+  printf("\n");
+
+  hdPrintScalers();
+  printf("\n");
+  hdPrintHelicityGeneratorConfig();
   printf("\n");
 
   printf("--------------------------------------------------------------------------------\n");
@@ -541,6 +559,7 @@ hdReset(uint8_t type, uint8_t clearA32)
 {
   int32_t rval = OK;
   uint32_t wreg = 0;
+  uint32_t adr32 = 0;
   CHECKINIT;
 
   switch(type)
@@ -558,9 +577,15 @@ hdReset(uint8_t type, uint8_t clearA32)
 
   clearA32 = clearA32 ? 1 : 0;
 
+  if(!clearA32)
+    adr32 = hdGetA32();
+
   HLOCK;
   vmeWrite32(&hdp->csr, HD_CSR_HARD_RESET);
   HUNLOCK;
+
+  if(!clearA32)
+    hdSetA32(adr32);
 
   return rval;
 }
@@ -578,18 +603,16 @@ hdSetA32(uint32_t a32base)
   int32_t rval = OK;
   uint32_t wreg = 0;
 
-  if((a32base & HD_ADR32_BASE_MASK) == 0)
+  if(((a32base >> 16) & HD_ADR32_BASE_MASK) == 0)
     {
       printf("%s: ERROR: Invalid a32base (0x%08x)\n",
 	     __func__, a32base);
       return ERROR;
     }
 
-  if(hdDatap != NULL)
+  if(hdp != NULL)
     {
-      /* If the pointer had already be defined, redefine it and update
-	 the module register
-      */
+      /* If the library has been initialized, configure pointer and register */
       devaddr_t laddr = 0;
       int32_t res = vmeBusToLocalAdrs(0x09,
 				      (char *)(devaddr_t)a32base,
@@ -610,6 +633,7 @@ hdSetA32(uint32_t a32base)
 
       vmeWrite32(&hdp->adr32, 0);
       vmeWrite32(&hdp->adr32, wreg);
+
       HUNLOCK;
     }
   else
@@ -693,7 +717,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
   switch(trigSrc)
     {
     case HD_INIT_INTERNAL:
-      wreg |= HD_CTRL1_TRIG_SRC_SOFT;
+      wreg |= HD_CTRL1_TRIG_SRC_SOFT | HD_CTRL1_SOFT_CONTROL_ENABLE;
       break;
 
     case HD_INIT_FP:
@@ -705,7 +729,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
       break;
 
     default:
-      wreg |= HD_CTRL1_TRIG_SRC_SOFT;
+      wreg |= HD_CTRL1_TRIG_SRC_SOFT | HD_CTRL1_SOFT_CONTROL_ENABLE;
       printf("%s: Invalid source (%d).  Trigger source set to Internal\n",
 	     __func__, trigSrc);
     }
@@ -714,7 +738,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
   switch(srSrc)
     {
     case HD_INIT_INTERNAL:
-      wreg |= HD_CTRL1_SYNC_RESET_SRC_SOFT;
+      wreg |= HD_CTRL1_SYNC_RESET_SRC_SOFT | HD_CTRL1_SOFT_CONTROL_ENABLE;
       break;
 
     case HD_INIT_FP:
@@ -726,7 +750,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
       break;
 
     default:
-      wreg |= HD_CTRL1_SYNC_RESET_SRC_SOFT;
+      wreg |= HD_CTRL1_SYNC_RESET_SRC_SOFT | HD_CTRL1_SOFT_CONTROL_ENABLE;
       printf("%s: Invalid source (%d).  SyncReset source set to Internal\n",
 	     __func__, srSrc);
     }
@@ -1084,6 +1108,51 @@ hdConfirmProcDelay(uint8_t pflag)
 
 /**
  * @ingroup Config
+ * @brief Enable / Disable BERR Response from the module for Block Read
+ *
+ * @param enable Enable flag
+ *            0 - Disable
+ *            1 - Enable
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSetBERR(uint8_t enable)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  HLOCK;
+  if(enable)
+    vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) | HD_CTRL1_BERR_ENABLE);
+  else
+    vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_BERR_ENABLE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the configuration for BERR Response from the module
+ *
+ * @return 1 if enabled, 0 if disabled, otherwise ERROR
+ */
+int32_t
+hdGetBERR(uint8_t enable)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = (vmeRead32(&hdp->ctrl1) & HD_CTRL1_BERR_ENABLE) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
  * @brief Enable the decoder, triggers, and event building for the module
  *
  * @return OK if successful, otherwise ERROR
@@ -1432,7 +1501,7 @@ hdReadBlock(volatile unsigned int *data, int nwrds, int rflag)
  *  @return Number of uint32 added to data if successful, otherwise ERROR.
  */
 int32_t
-hdReadScalers(volatile unsigned int *data, int rflag)
+hdReadScalers(volatile uint32_t *data, int rflag)
 {
   int32_t dCnt = 0;
   CHECKINIT;
@@ -1456,6 +1525,38 @@ hdReadScalers(volatile unsigned int *data, int rflag)
   HUNLOCK;
 
   return dCnt;
+}
+
+/**
+ *  @ingroup Readout
+ *  @brief Print out Scaler Data to standard out
+ *
+ *  @return OK if successful, otherwise ERROR.
+ */
+int32_t
+hdPrintScalers()
+{
+  volatile uint32_t scalers[9];
+
+  if(hdReadScalers(scalers, 1))
+    {
+      printf("  Helicity Scalers:\n");
+      printf("    T_SETTLE rising  = 0x%08x (%d)\n", scalers[0], scalers[0]);
+      printf("    T_SETTLE falling = 0x%08x (%d)\n", scalers[1], scalers[1]);
+      printf("    PATTERN_SYNC     = 0x%08x (%d)\n", scalers[2], scalers[2]);
+      printf("    PAIR_SYNC        = 0x%08x (%d)\n", scalers[3], scalers[3]);
+      printf("\n");
+      printf("  Signal scalers:\n");
+      printf("    Trig1            = 0x%08x (%d)\n", scalers[4], scalers[4]);
+      printf("    Trig2            = 0x%08x (%d)\n", scalers[5], scalers[5]);
+      printf("    SyncReset        = 0x%08x (%d)\n", scalers[6], scalers[6]);
+      printf("\n");
+      printf("  Run Scalers:\n");
+      printf("    Events           = 0x%08x (%d)\n", scalers[7], scalers[7]);
+      printf("    Blocks           = 0x%08x (%d)\n", scalers[8], scalers[8]);
+    }
+
+  return OK;
 }
 
 /**
@@ -1663,4 +1764,257 @@ hdGetHelicityGeneratorConfig(uint8_t *pattern, uint8_t *windowDelay,
   *seed = rreg3 & HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK;
 
   return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Print to standard outevent the configured parameeters for
+ * the internal helicity generator
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdPrintHelicityGeneratorConfig()
+{
+  uint8_t pattern, windowDelay;
+  uint16_t settleTime;
+  uint32_t stableTime, seed;
+
+  if(hdGetHelicityGeneratorConfig(&pattern, &windowDelay,
+				  &settleTime, &stableTime,
+				  &seed) == OK)
+    {
+      printf("\n");
+      printf("  Helicity Generator Configuration\n");
+      printf("\n");
+      printf("               Window Settle                Stable\n");
+      printf("    Pattern    Delay  Time                  Time                     Seed\n");
+      printf("  ------------------------------------------------------------------------------\n");
+      /*
+       *     "    PAIR       0      0x0000 (    0 ns)     0x0000000 (        0 ns) 0x00000000"
+       */
+
+      printf("    %s  ",
+	     (pattern == 0) ? "PAIR   " :
+	     (pattern == 1) ? "QUARTET" :
+	     (pattern == 2) ? "OCTET  " :
+	     (pattern == 3) ? "TOGGLE " : "???????" );
+
+      printf("%3d      ", windowDelay);
+
+      printf("0x%04x (%5d ns)     ", settleTime, settleTime * 8);
+      printf("0x%07x (%9d ns) ", stableTime, stableTime * 8);
+
+      printf("0x%08x", seed);
+      printf("\n");
+    }
+
+  return OK;
+}
+
+struct data_struct
+{
+  uint32_t new_type;
+  uint32_t type;
+  uint32_t slot_id_hd;
+  uint32_t mod_id_hd;
+  uint32_t slot_id_tr;
+  uint32_t n_evts;
+  uint32_t blk_num;
+  uint32_t n_words;
+  uint32_t evt_num_1;
+  uint32_t trig_time;
+  uint32_t time_now;
+  uint32_t time_1;
+  uint32_t time_2;
+  uint32_t num_words;
+  uint32_t decoder[16];
+} hd_data;
+
+void
+hdDecodeData(uint32_t data)
+{
+/* Helicity decoder */
+
+  static uint32_t type_last = 15;	/* initialize to type FILLER WORD */
+  static uint32_t time_last = 0;
+  static uint32_t decoder_index = 0;
+  static uint32_t num_decoder_words = 1;
+
+  static uint32_t slot_id_ev_hd = 0;
+  static uint32_t slot_id_dnv = 0;
+  static uint32_t slot_id_fill = 0;
+  int32_t i_print = 1;
+
+  if(decoder_index)		/* decoder type data word - set by decoder header word */
+    {
+      hd_data.type = 16;	/*  set decoder data words as type 16 */
+      hd_data.new_type = 0;
+      if(decoder_index < num_decoder_words)
+	{
+	  hd_data.decoder[decoder_index - 1] = data;
+	  if(i_print)
+	    printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
+		   data);
+	  decoder_index++;
+	}
+      else			/* last decoder word */
+	{
+	  hd_data.decoder[decoder_index - 1] = data;
+	  if(i_print)
+	    printf("%8X - decoder data(%d) = %d\n", data, (decoder_index - 1),
+		   data);
+	  decoder_index = 0;
+	  num_decoder_words = 1;
+	}
+    }
+  else				/* normal typed word */
+    {
+      if(data & 0x80000000)	/* data type defining word */
+	{
+	  hd_data.new_type = 1;
+	  hd_data.type = (data & 0x78000000) >> 27;
+	}
+      else			/* data type continuation word */
+	{
+	  hd_data.new_type = 0;
+	  hd_data.type = type_last;
+	}
+
+      switch (hd_data.type)
+	{
+	case 0:		/* BLOCK HEADER */
+	  hd_data.slot_id_hd = (data & 0x7C00000) >> 22;
+	  hd_data.mod_id_hd = (data & 0x3C0000) >> 18;
+	  hd_data.n_evts = (data & 0x000FF);
+	  hd_data.blk_num = (data & 0x3FF00) >> 8;
+	  if(i_print)
+	    printf
+	      ("%8X - BLOCK HEADER - slot = %d  id = %d  n_evts = %d  n_blk = %d\n",
+	       data, hd_data.slot_id_hd, hd_data.mod_id_hd, hd_data.n_evts,
+	       hd_data.blk_num);
+	  break;
+
+	case 1:		/* BLOCK TRAILER */
+	  hd_data.slot_id_tr = (data & 0x7C00000) >> 22;
+	  hd_data.n_words = (data & 0x3FFFFF);
+	  if(i_print)
+	    printf("%8X - BLOCK TRAILER - slot = %d   n_words = %d\n",
+		   data, hd_data.slot_id_tr, hd_data.n_words);
+	  break;
+
+	case 2:		/* EVENT HEADER */
+	  if(hd_data.new_type)
+	    {
+	      slot_id_ev_hd = (data & 0x07C00000) >> 22;
+	      hd_data.evt_num_1 = (data & 0x00000FFF);
+	      hd_data.trig_time = (data & 0x003FF000) >> 12;
+	      if(i_print)
+		printf
+		  ("%8X - EVENT HEADER - slot = %d  evt_num = %d  trig_time = %d (%X)\n",
+		   data, slot_id_ev_hd, hd_data.evt_num_1, hd_data.trig_time,
+		   hd_data.trig_time);
+	    }
+	  break;
+
+	case 3:		/* TRIGGER TIME */
+	  if(hd_data.new_type)
+	    {
+	      hd_data.time_1 = (data & 0x7FFFFFF);
+	      if(i_print)
+		printf("%8X - TRIGGER TIME 1 - time = %X\n", data,
+		       hd_data.time_1);
+	      hd_data.time_now = 1;
+	      time_last = 1;
+	    }
+	  else
+	    {
+	      if(time_last == 1)
+		{
+		  hd_data.time_2 = (data & 0xFFFFFF);
+		  if(i_print)
+		    printf("%8X - TRIGGER TIME 2 - time = %X\n", data,
+			   hd_data.time_2);
+		  hd_data.time_now = 2;
+		}
+	      else if(i_print)
+		printf("%8X - TRIGGER TIME - (ERROR)\n", data);
+
+	      time_last = hd_data.time_now;
+	    }
+	  break;
+
+	case 4:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 5:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 6:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 7:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 8:		/* DECODER HEADER */
+	  num_decoder_words = (data & 0x3F);	/* number of decoder words to follow */
+	  hd_data.num_words = num_decoder_words;
+	  decoder_index = 1;	/* identify next word as a decoder data word */
+	  if(i_print)
+	    printf("%8X - DECODER HEADER = %d  (NUM DECODER WORDS = %d)\n",
+		   data, hd_data.type, hd_data.num_words);
+	  break;
+
+	case 9:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 10:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 11:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 12:		/* UNDEFINED TYPE */
+	  if(i_print)
+	    printf("%8X - UNDEFINED TYPE = %d\n", data, hd_data.type);
+	  break;
+
+	case 13:		/* END OF EVENT */
+	  if(i_print)
+	    printf("%8X - END OF EVENT = %d\n", data, hd_data.type);
+	  break;
+
+	case 14:		/* DATA NOT VALID (no data available) */
+	  slot_id_dnv = (data & 0x7C00000) >> 22;
+	  if(i_print)
+	    printf("%8X - DATA NOT VALID = %d  slot = %d\n", data,
+		   hd_data.type, slot_id_dnv);
+	  break;
+
+	case 15:		/* FILLER WORD */
+	  slot_id_fill = (data & 0x7C00000) >> 22;
+	  if(i_print)
+	    printf("%8X - FILLER WORD = %d  slot = %d\n", data, hd_data.type,
+		   slot_id_fill);
+	  break;
+	}
+
+      type_last = hd_data.type;	/* save type of current data word */
+
+    }
+
 }

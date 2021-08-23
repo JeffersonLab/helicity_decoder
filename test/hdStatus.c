@@ -43,7 +43,7 @@ main(int argc, char *argv[])
   vmeCheckMutexHealth(1);
   vmeBusLock();
 
-  hdInit(address, HD_INIT_INTERNAL, 0, 0);
+  hdInit(address, 0, 0, HD_INIT_NO_INIT);
   hdStatus(1);
 
  CLOSE:
