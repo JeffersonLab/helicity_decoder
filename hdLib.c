@@ -349,11 +349,24 @@ int32_t
 hdStatus(int pflag)
 {
   HD rv;
+  CHECKINIT;
+
+  uint32_t vmeAddr = (uint32_t)(devaddr_t)hdp - hdA24Offset;
 
 #ifndef READHD
 #define READHD(_reg)				\
   rv._reg = vmeRead32(&hdp->_reg);
 #endif
+
+  HLOCK;
+  READHD(version);
+  READHD(csr);
+  READHD(ctrl1);
+  READHD(ctrl2);
+  READHD(adr32);
+  READHD(blk_size);
+  READHD(delay);
+  HUNLOCK;
 
 #ifndef PREG
 #define PREG(_off, _reg)						\
@@ -361,6 +374,147 @@ hdStatus(int pflag)
 	     #_reg, (unsigned long)&rv._reg - (unsigned long)&rv, rv._reg, \
 	     #_off);
 #endif
+  if(pflag)
+    {
+      PREG(\t,version);
+      PREG(\n,csr);
+      PREG(\t,ctrl1);
+      PREG(\n,ctrl2);
+      PREG(\t,adr32);
+      PREG(\n,blk_size);
+      PREG(\n,delay);
+    }
+
+  printf("\n");
+  printf("STATUS for JLab Helicity Decoder\n");
+  printf("--------------------------------------------------------------------------------\n");
+  printf("Slot    Type     Rev      FW         A24           A32\n");
+  printf("--------------------------------------------------------------------------------\n");
+
+  //  printf("20    0x1234    0x12    0x12    0x123456    0x12345678\n");
+
+  printf("%2d    ", (rv.intr & HD_INT_GEO_MASK) >> 16);
+
+  printf("0x%04x    ", (rv.version & HD_VERSION_BOARD_TYPE_MASK) >> 16);
+  printf("0x%02x    ", (rv.version & HD_VERSION_BOARD_REV_MASK) >> 8);
+  printf("0x%02x    ", rv.version & HD_VERSION_FIRMWARE_MASK);
+  printf("0x%06x    ", vmeAddr);
+  if(rv.adr32 & HD_ADR32_ENABLE)
+    printf("0x%08x", (rv.adr32 & HD_ADR32_BASE_MASK) << 16);
+  else
+    printf("DISABLED");
+  printf("\n");
+
+
+  printf("\n");
+  printf("                         Configuration\n\n");
+
+
+  printf(".Signal Sources..    .Helicity Src.  Block    Processing Delay \n");
+  printf("Clk   Trig   Sync    Input   Output  Level    Trigger     Data \n");
+  printf("--------------------------------------------------------------------------------\n");
+  //  printf("INT    INT    INT    COPPER     EXT    255    4095       4095\n");
+  printf("\n");
+
+  printf("%s    ",
+	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_P0 ? "VXS" :
+	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_FP ? " FP" :
+	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_FP2 ? "FP2" :
+	 (rv.ctrl1 & HD_CTRL1_CLK_SRC_MASK) == HD_CTRL1_CLK_SRC_INT ? "INT" : "???");
+
+  printf("%s    ",
+	 (rv.ctrl1 & HD_CTRL1_TRIG_SRC_MASK) == HD_CTRL1_TRIG_SRC_P0 ? "VXS" :
+	 (rv.ctrl1 & HD_CTRL1_TRIG_SRC_MASK) == HD_CTRL1_TRIG_SRC_FP ? " FP" :
+	 (rv.ctrl1 & HD_CTRL1_TRIG_SRC_MASK) == HD_CTRL1_TRIG_SRC_FP2 ? "FP2" :
+	 (rv.ctrl1 & HD_CTRL1_TRIG_SRC_MASK) == HD_CTRL1_TRIG_SRC_SOFT ? "INT" : "???");
+
+  printf("%s    ",
+	 (rv.ctrl1 & HD_CTRL1_SYNC_RESET_SRC_MASK) == HD_CTRL1_SYNC_RESET_SRC_P0 ? "VXS" :
+	 (rv.ctrl1 & HD_CTRL1_SYNC_RESET_SRC_MASK) == HD_CTRL1_SYNC_RESET_SRC_FP ? " FP" :
+	 (rv.ctrl1 & HD_CTRL1_SYNC_RESET_SRC_MASK) == HD_CTRL1_SYNC_RESET_SRC_FP2 ? "FP2" :
+	 (rv.ctrl1 & HD_CTRL1_SYNC_RESET_SRC_MASK) == HD_CTRL1_SYNC_RESET_SRC_SOFT ?
+	 "INT" : "???");
+
+  printf("%s    ",
+	 (rv.ctrl1 & HD_CTRL1_HEL_SRC_MASK) == HD_CTRL1_USE_INT_HELICITY ? "   INT" :
+	 (rv.ctrl1 & HD_CTRL1_HEL_SRC_MASK) == HD_CTRL1_USE_EXT_CU_IN ? "COPPER" :
+	 " FIBER");
+
+  printf("%s    ",
+	 (rv.ctrl1 & HD_CTRL1_INT_HELICITY_TO_FP) ? "INT" : "EXT");
+
+  printf("%3d    ",
+	 rv.blk_size & HD_BLOCKLEVEL_MASK);
+
+  printf("%4d       ",
+	 rv.delay & HD_DELAY_TRIGGER_MASK);
+
+  printf("%4d",
+	   (rv.delay & HD_DELAY_DATA_MASK) >> 16);
+  printf("\n");
+
+
+  printf("                                   Helicity\n");
+  printf(" Decoder    Triggers    EvtBuild   Generator  Force Busy\n");
+  printf("--------------------------------------------------------------------------------\n");
+  //  printf("Disabled    Disabled    Disabled    Disabled    Disabled\n");
+  printf("\n");
+
+  printf("%s    ",
+	 rv.ctrl2 & HD_CTRL2_DECODER_ENABLE ? " ENABLED" : "Disabled");
+
+  printf("%s    ",
+	 rv.ctrl2 & HD_CTRL2_GO ? " ENABLED" : "Disabled");
+
+  printf("%s    ",
+	 rv.ctrl2 & HD_CTRL2_EVENT_BUILD_ENABLE ? " ENABLED" : "Disabled");
+
+  printf("%s    ",
+	 rv.ctrl2 & HD_CTRL2_INT_HELICITY_ENABLE ? " ENABLED" : "Disabled");
+
+  printf("%s    ",
+	 rv.ctrl2 & HD_CTRL2_FORCE_BUSY ? " ENABLED" : "Disabled");
+
+  printf("                         Status\n\n");
+  printf("                                                             Int Buff\n");
+  printf("Helicity   ...Block Data..       Event             Latch     ..Empty.\n");
+  printf("Sequence   Accepted  Ready      Buffer  BERR  BUSY  BUSY      0     1\n");
+  printf("--------------------------------------------------------------------------------\n");
+  //  printf("   ERROR        YES    YES    NotEmpty    HI    LO    HI    Yes   Yes\n");
+  printf("\n");
+
+  printf("   %s        ",
+	 rv.csr & HD_CSR_HELICITY_SEQ_ERROR ? "ERROR" : "   OK");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_BLOCK_ACCEPTED ? "YES" : "---");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_BLOCK_READY ? "YES" : "---");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_EMPTY ? "   Empty" : "NotEmpty");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_BERR_ASSERTED ? " HI" : " lo");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_BUSY ? " HI" : " lo");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_BUSY_LATCHED ? " HI" : " lo");
+
+  printf("%s    ",
+	 rv.csr & HD_CSR_INTERNAL_BUF0 ? "YES" : "---");
+
+  printf("%s",
+	 rv.csr & HD_CSR_INTERNAL_BUF1 ? "YES" : "---");
+  printf("\n");
+
+  printf("--------------------------------------------------------------------------------\n");
+  printf("\n\n");
+
+
 
   return OK;
 }
