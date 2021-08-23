@@ -248,7 +248,7 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
     }
 
   /* Reset / initialize stuff here */
-  hdReset(0, 1);
+  hdReset(1, 1);
   hdSetA32(hdA32Base);
 
   /* Set Clock, Trigger, Sync Source */
@@ -277,6 +277,8 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
   /* latency = 0x40 (64 x 8 ns = 512 ns),
      data delay = 0x100 (256 x 8 ns = 2048 ns) */
   hdSetProcDelay(0x100, 0x40);
+
+  hdReset(0, 0);
 
 
   return OK;
