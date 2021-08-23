@@ -1263,6 +1263,75 @@ hdReadBlock(volatile unsigned int *data, int nwrds, int rflag)
 }
 
 /**
+ *  @ingroup Readout
+ *  @brief Scaler Data readout routine
+ *
+ *  @param data   - local memory address to place data
+ *  @param rflag  - Readout flag
+ *            0 - helicity scalers
+ *            1 - helicity scalers, trig1, trig2, syncreset, evt_count, blk_count
+ *            2 - trig1, trig2, syncreset, evt_count, blk_count
+ *
+ *
+ *  @return Number of uint32 added to data if successful, otherwise ERROR.
+ */
+int32_t
+hdReadScalers(volatile unsigned int *data, int rflag)
+{
+  int32_t dCnt = 0;
+  CHECKINIT;
+
+  HLOCK;
+  if(rflag != 2)
+    {
+      data[dCnt++] = vmeRead32(&hdp->helicity_scaler[0]);
+      data[dCnt++] = vmeRead32(&hdp->helicity_scaler[1]);
+      data[dCnt++] = vmeRead32(&hdp->helicity_scaler[2]);
+      data[dCnt++] = vmeRead32(&hdp->helicity_scaler[3]);
+    }
+  if(rflag != 0)
+    {
+      data[dCnt++] = vmeRead32(&hdp->trig1_scaler);
+      data[dCnt++] = vmeRead32(&hdp->trig2_scaler);
+      data[dCnt++] = vmeRead32(&hdp->sync_scaler);
+      data[dCnt++] = vmeRead32(&hdp->evt_count);
+      data[dCnt++] = vmeRead32(&hdp->blk_count);
+    }
+  HUNLOCK;
+
+  return dCnt;
+}
+
+/**
+ *  @ingroup Readout
+ *  @brief Helicity History register readout
+ *
+ *  @param data   - local memory address to place data
+ *                  Bit 0 is the most recent value
+ *                  element 0 : PATTERN_SYNC
+ *                  element 1 : PAIR_SYNC
+ *                  element 2 : reported HELICITY
+ *                  element 3 : reported HELICITY at PATTERN_SYNC
+ *
+ *  @return Number (4) of uint32 added to data if successful, otherwise ERROR.
+ */
+int32_t
+hdReadHelicityHistory(volatile unsigned int *data)
+{
+  int32_t dCnt = 0;
+  CHECKINIT;
+
+  HLOCK;
+  data[dCnt++] = vmeRead32(&hdp->helicity_history1);
+  data[dCnt++] = vmeRead32(&hdp->helicity_history2);
+  data[dCnt++] = vmeRead32(&hdp->helicity_history3);
+  data[dCnt++] = vmeRead32(&hdp->helicity_history4);
+  HUNLOCK;
+
+  return dCnt;
+}
+
+/**
  * @ingroup Status
  * @brief Get the recovered shift register value(s)
  *

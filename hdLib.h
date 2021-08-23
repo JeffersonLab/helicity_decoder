@@ -225,6 +225,8 @@ int32_t hdBERRStatus();
 int32_t hdBusyStatus(uint8_t *latched);
 
 int32_t hdReadBlock(volatile unsigned int *data, int nwrds, int rflag);
+int32_t hdReadScalers(volatile unsigned int *data, int rflag);
+int32_t hdReadHelicityHistory(volatile unsigned int *data);
 
 int32_t hdGetRecoveredShiftRegisterValue(uint32_t *recovered, uint32_t *internalGenerator);
 
