@@ -113,9 +113,11 @@ typedef struct hd_struct
 /* 0x18 blocklevel bits and masks */
 #define HD_BLOCKLEVEL_MASK 0x0000FFFF
 
-/* 0x1C trigger_latency bits and masks */
-#define HD_TRIGGER_LATENCY_MASK   0x000003FF
-#define HD_TRIGGER_LATENCY_STATUS (1 << 31)
+/* 0x1C delay bits and masks */
+#define HD_DELAY_TRIGGER_MASK       0x000003FF
+#define HD_DELAY_TRIGGER_CONFIGURED (1 << 15)
+#define HD_DELAY_DATA_MASK          0x0FFF0000
+#define HD_DELAY_DATA_CONFIGURED    (1 << 31)
 
 
 /* 0x20 helicity_config1 */
@@ -157,6 +159,10 @@ typedef struct hd_struct
 /* 0x58 generator_shift_reg masks */
 #define HD_GENERATOR_SHIFT_REG_MASK 0x3FFFFFFF
 
+/* 0x60-64 delay processing confirmation masks */
+#define HD_CONFIRM_READ_ADDR_MASK   0x00000FFF
+#define HD_CONFIRM_WRITE_ADDR_MASK  0x0FFF0000
+
 /* 0x78 firmware_csr bits and masks */
 #define HD_FIRMWARE_CSR_LAST_VALID_READ_MASK 0x000000FF
 #define HD_FIRMWARE_CSR_BUSY                 (1 << 8)
@@ -167,6 +173,13 @@ typedef struct hd_struct
 /* 0x80 firmware_data bits and masks */
 #define HD_FIRMWARE_DATA_WRITE_MASK   0x000000FF
 #define HD_FIRMWARE_DATA_ADDRESS_MASK 0xFFFFFF00
+
+/* Data Format words and masks */
+#define HD_DUMMY_WORD             0xF8000000
+#define HD_DATA_TYPE_DEFINE       0x80000000
+#define HD_DATA_TYPE_MASK         0x78000000
+#define HD_DATA_BLOCK_HEADER      0x00000000
+#define HD_DATA_BLOCK_TRAILER     0x08000000
 
 /* Supported Firmware Version */
 #define HD_SUPPORTED_FIRMWARE  0x0000
@@ -196,12 +209,22 @@ int32_t hdGetHelicitySource(uint8_t *helSrc, uint8_t *input, uint8_t *output);
 
 int32_t hdSetBlocklevel(uint8_t blklevel);
 int32_t hdGetBlocklevel();
+int32_t hdSetProcDelay(uint16_t dataInputDelay, uint16_t triggerLatencyDelay);
+int32_t hdGetProcDelay(uint16_t *dataInputDelay, uint16_t *triggerLatencyDelay);
+int32_t hdConfirmProcDelay(uint8_t pflag);
 
 int32_t hdEnable();
 int32_t hdDisable();
 
 int32_t hdTrig(int pflag);
 int32_t hdSync(int pflag);
+int32_t hdBusy(int enable);
+
+int32_t hdBReady();
+int32_t hdBERRStatus();
+int32_t hdBusyStatus(uint8_t *latched);
+
+int32_t hdReadBlock(volatile unsigned int *data, int nwrds, int rflag);
 
 int32_t hdGetRecoveredShiftRegisterValue(uint32_t *recovered, uint32_t *internalGenerator);
 

@@ -271,8 +271,12 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
     }
 
   /* Useful defaults */
+  /* blocklevel = 1*/
   hdSetBlocklevel(1);
 
+  /* latency = 0x40 (64 x 8 ns = 512 ns),
+     data delay = 0x100 (256 x 8 ns = 2048 ns) */
+  hdSetProcDelay(0x100, 0x40);
 
 
   return OK;
@@ -780,6 +784,150 @@ hdGetBlocklevel()
 
 /**
  * @ingroup Config
+ * @brief Set the helicity and trigger processing delay for the module
+ *
+ * @param dataInputDelay Data Input Delay [1-4095]
+ *                       1 count = 8ns
+ * @param triggerLatencyDelay Trigger Latency Delay [1-4095]
+ *                       1 count = 8ns
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSetProcDelay(uint16_t dataInputDelay, uint16_t triggerLatencyDelay)
+{
+  int32_t rval = OK;
+  uint32_t wreg = 0;
+  CHECKINIT;
+
+  if((dataInputDelay == 0) || (dataInputDelay > 0xFFF))
+    {
+      printf("%s: ERROR: Invalid dataInputDelay (%d)\n",
+	     __func__, dataInputDelay);
+      return ERROR;
+    }
+  if((triggerLatencyDelay == 0) || (triggerLatencyDelay > 0xFFF))
+    {
+      printf("%s: ERROR: Invalid triggerLatencyDelay (%d)\n",
+	     __func__, triggerLatencyDelay);
+      return ERROR;
+    }
+
+  wreg = triggerLatencyDelay | (dataInputDelay << 16);
+  HLOCK;
+  vmeWrite32(&hdp->delay, wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the programmed helicity and trigger processing delay for the module
+ *
+ * @param *dataInputDelay Address for Data Input Delay [1-4095]
+ *                       1 count = 8ns
+ * @param *triggerLatencyDelay Address for Trigger Latency Delay [1-4095]
+ *                       1 count = 8ns
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetProcDelay(uint16_t *dataInputDelay, uint16_t *triggerLatencyDelay)
+{
+  int32_t rval = OK;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->delay);
+
+  *dataInputDelay = (rreg & HD_DELAY_DATA_MASK) >> 16;
+  *triggerLatencyDelay = rreg & HD_DELAY_TRIGGER_MASK;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Confirm that programmed processing delays match the latched
+ * Write-Read addresses
+ *
+ * @param pflag Print Flag
+ *              Print results to standard output
+ *
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdConfirmProcDelay(uint8_t pflag)
+{
+  int32_t rval = OK;
+  uint32_t rreg_programmed = 0, rreg_trigger = 0, rreg_data = 0;
+  uint16_t dataInputDelay = 0, triggerLatencyDelay = 0;
+  int32_t wraddr = 0, rdaddr = 0, delay = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg_programmed = vmeRead32(&hdp->delay);
+  rreg_trigger = vmeRead32(&hdp->latency_confirm);
+  rreg_data = vmeRead32(&hdp->delay_confirm);
+  HUNLOCK;
+
+  /* Check trigger */
+  dataInputDelay = (rreg_programmed & HD_DELAY_DATA_MASK) >> 16;
+  rdaddr = rreg_trigger & HD_CONFIRM_READ_ADDR_MASK;
+  wraddr = rreg_trigger & HD_CONFIRM_WRITE_ADDR_MASK;
+
+  if (wraddr > rdaddr) delay = wraddr - rdaddr;
+  else                 delay = 4096 + wraddr - rdaddr;
+
+  if(dataInputDelay != delay)
+    {
+      printf("%s: ERROR: Programmed dataInputDelay != wraddr-rdaddr  (0x%04x != 0x%04x)\n",
+	     __func__,
+	     dataInputDelay, delay);
+      rval = ERROR;
+    }
+  else if(pflag)
+    {
+      printf("%s: dataInputDelay Confirmed 0x%04x = %s0x%04x - 0x%04x\n",
+	     __func__,
+	     dataInputDelay,
+	     (wraddr > rdaddr) ? "" : "4096 + ",
+	     wraddr, rdaddr);
+    }
+
+  /* Check data */
+  triggerLatencyDelay = rreg_programmed & HD_DELAY_TRIGGER_MASK;
+  rdaddr = rreg_data & HD_CONFIRM_READ_ADDR_MASK;
+  wraddr = rreg_data & HD_CONFIRM_WRITE_ADDR_MASK;
+
+  if (wraddr > rdaddr) delay = wraddr - rdaddr;
+  else                 delay = 4096 + wraddr - rdaddr;
+
+  if(triggerLatencyDelay != delay)
+    {
+      printf("%s: ERROR: Programmed triggerLatencydelay != wraddr-rdaddr  (0x%04x != 0x%04x)\n",
+	     __func__,
+	     triggerLatencyDelay, delay);
+      rval = ERROR;
+    }
+  else if(pflag)
+    {
+      printf("%s: triggerLatencydelay Confirmed 0x%04x = %s0x%04x - 0x%04x\n",
+	     __func__,
+	     triggerLatencyDelay,
+	     (wraddr > rdaddr) ? "" : "4096 + ",
+	     wraddr, rdaddr);
+    }
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
  * @brief Enable the decoder, triggers, and event building for the module
  *
  * @return OK if successful, otherwise ERROR
@@ -863,6 +1011,252 @@ hdSync(int pflag)
 
   HLOCK;
   vmeWrite32(&hdp->csr, HD_CSR_SYNC_RESET_PULSE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Set the BUSY status of the module
+ *
+ * @param enable Enable Flag
+ *             0 Disable Busy
+ *             1 Enable Busy
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdBusy(int enable)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  HLOCK;
+  if(enable)
+    vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) | HD_CTRL2_FORCE_BUSY);
+  else
+    vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) & ~HD_CTRL2_FORCE_BUSY);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the block ready status
+ *
+ * @return 1 if block is ready, 0 if not, otherwise ERROR
+ */
+int32_t
+hdBReady()
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = (vmeRead32(&hdp->csr) & HD_CSR_BLOCK_READY) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the BERR status
+ *
+ * @return 1 if module asserted BERR, 0 if not, otherwise ERROR
+ */
+int32_t
+hdBERRStatus()
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = (vmeRead32(&hdp->csr) & HD_CSR_BERR_ASSERTED) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the BUSY status
+ *
+ * @return 1 if module asserted BERR, 0 if not, otherwise ERROR
+ */
+int32_t
+hdBusyStatus(uint8_t *latched)
+{
+  int32_t rval = 0;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->csr);
+
+  rval = (rreg & HD_CSR_BUSY) ? 1 : 0;
+
+  if(latched != NULL)
+    {
+      *latched = (rreg & HD_CSR_BUSY_LATCHED) ? 1 : 0;
+
+      if(*latched) /* Clear if it's latched */
+	vmeWrite32(&hdp->csr, HD_CSR_BUSY_LATCHED);
+    }
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Readout
+ * @brief Read a block of events from the module
+ *
+ * @param   data  - local memory address to place data
+ * @param   nwrds - Max number of words to transfer
+ * @param   rflag - Readout Flag
+ *       -       0 - programmed I/O
+ *       -       1 - DMA transfer using Universe/Tempe DMA Engine
+ *                    (DMA VME transfer Mode must be setup prior)
+ *
+ * @return Number of words transferred to data if successful, ERROR otherwise
+ *
+ */
+int32_t
+hdReadBlock(volatile unsigned int *data, int nwrds, int rflag)
+{
+  int32_t rval = OK;
+  int32_t ii, dummy=0, iword = 0;
+  int32_t dCnt, retVal, xferCount;
+  volatile uint32_t *laddr;
+  uint32_t vmeAdr, val;
+  int32_t ntrig=0, itrig = 0, trigwords = 0;
+
+  CHECKINIT;
+
+  HLOCK;
+  if(rflag >= 1)
+    { /* Block transfer */
+      /* Assume that the DMA programming is already setup.
+	 Don't Bother checking if there is valid data - that should be done prior
+	 to calling the read routine */
+
+      /* Check for 8 byte boundary for address -
+	 insert dummy word*/
+      if((devaddr_t) (data)&0x7)
+	{
+	  *data = LSWAP(HD_DUMMY_WORD);
+	  dummy = 1;
+	  laddr = (data + 1);
+	}
+      else
+	{
+	  dummy = 0;
+	  laddr = data;
+	}
+
+      vmeAdr = (devaddr_t)hdDatap - hdA32Offset;
+
+      retVal = vmeDmaSend((devaddr_t)laddr, vmeAdr, (nwrds<<2));
+      if(retVal != 0)
+	{
+	  printf("\n%s: ERROR in DMA transfer Initialization 0x%x\n",
+		 __func__, retVal);
+	  HUNLOCK;
+	  return(retVal);
+	}
+
+      /* Wait until Done or Error */
+      retVal = vmeDmaDone();
+
+      if(retVal > 0)
+	{
+	  xferCount = ((retVal>>2) + dummy); /* Number of longwords transfered */
+
+	  HUNLOCK;
+	  return(xferCount);
+	}
+      else if (retVal == 0)
+	{
+	  printf("\n%s: WARNING: DMA transfer returned zero word count 0x%x\n",
+		 __func__,
+		 nwrds);
+	  HUNLOCK;
+	  return(nwrds);
+	}
+      else
+	{  /* Error in DMA */
+	  printf("\n%s: ERROR: vmeDmaDone returned an Error\n",
+		 __func__);
+	  HUNLOCK;
+	  return(retVal>>2);
+
+	}
+    }
+  else
+    { /* Programmed IO */
+      dCnt = 0;
+      ii=0;
+
+      /* Check if Bus Errors are enabled. If so then disable for Prog I/O reading */
+      uint8_t berr = (vmeRead32(&hdp->ctrl1) & HD_CTRL1_BERR_ENABLE) ? 1 : 0;
+      if(berr)
+	vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_BERR_ENABLE);
+
+      /* Read Block Header - should be first word */
+      uint32_t bhead = vmeRead32(hdDatap);
+
+      if((bhead&HD_DATA_TYPE_DEFINE)&&((bhead&HD_DATA_TYPE_MASK) == HD_DATA_BLOCK_HEADER))
+	{
+
+	  data[dCnt] = LSWAP(bhead); /* Swap back to little-endian */
+	  dCnt++;
+
+	}
+      else
+	{
+	  /* We got bad data - Check if there is any data at all */
+	  if( (vmeRead32(&hdp->evt_count) & HD_EVENTS_ON_BOARD_MASK) == 0)
+	    {
+	      printf("%s: FIFO Empty (0x%08x)\n",
+		     __func__, bhead);
+	      HUNLOCK;
+	      return(0);
+	    }
+	  else
+	    {
+	      printf("%s: ERROR: Invalid Header Word 0x%08x\n",
+		     __func__, bhead);
+	      HUNLOCK;
+	      return(ERROR);
+	    }
+	}
+
+      ii=0;
+      while(ii<nwrds)
+	{
+	  val = vmeRead32(hdDatap);
+	  data[ii+2] = LSWAP(val);
+
+	  if( (val&HD_DATA_TYPE_DEFINE)
+	      && ((val&HD_DATA_TYPE_MASK) == HD_DATA_BLOCK_TRAILER) )
+	    break;
+	  ii++;
+
+	}
+      ii++;
+      dCnt += ii;
+
+      /* Re-enabled Bus errors */
+      if(berr)
+	vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) | HD_CTRL1_BERR_ENABLE);
+
+      HUNLOCK;
+      return dCnt;
+    }
+
   HUNLOCK;
 
   return rval;
@@ -962,7 +1356,8 @@ hdHelicityGeneratorConfig(uint8_t pattern, uint8_t windowDelay,
 			  uint32_t seed)
 {
   int32_t rval = OK;
-  uint32_t wreg1, wreg2, wreg3;
+  uint32_t rreg = 0, wreg1, wreg2, wreg3;
+  uint8_t reenable=0;
   CHECKINIT;
 
   if(pattern > 3)
@@ -977,9 +1372,29 @@ hdHelicityGeneratorConfig(uint8_t pattern, uint8_t windowDelay,
   wreg3 = seed & HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK;
 
   HLOCK;
+  /* Check if the generator is already enabled */
+  rreg = vmeRead32(&hdp->ctrl2);
+  reenable = (rreg & HD_CTRL2_INT_HELICITY_ENABLE) ? 1 : 0;
+
+  if(reenable)
+    {
+      /* Disable generator */
+      vmeWrite32(&hdp->ctrl2, rreg & ~HD_CTRL2_INT_HELICITY_ENABLE);
+      taskDelay(10);
+    }
+
   vmeWrite32(&hdp->gen_config1, wreg1);
   vmeWrite32(&hdp->gen_config2, wreg2);
   vmeWrite32(&hdp->gen_config3, wreg3);
+
+  taskDelay(10);
+
+  if(reenable)
+    {
+      /* Reenable generator */
+      vmeWrite32(&hdp->ctrl2, rreg | HD_CTRL2_INT_HELICITY_ENABLE);
+      taskDelay(10);
+    }
   HUNLOCK;
 
   return rval;
