@@ -6,11 +6,52 @@ Authors:
 
 * What is this for?
 
-  This is the library for the JLab Helicity Decoder.
-
-  It is in development, and may require a tweak or two.
+  This is the library for the JLab Helicity Decoder.  Use it with [[https://github.com/JeffersonLab/jvme][jvme]]
+  to configure and readout a [[https://coda.jlab.org/drupal/system/files/pdfs/HardwareManual/HelicityDecoder/Programming%20the%20Helicity%20Decoder%20Module%20V5.pdf][JLab Helicity Decoder]] in a VME crate.
 
 * What do I do with it?
 
-  Use it with [[https://github.com/JeffersonLab/jvme][jvme]] to control and readout a [[https://coda.jlab.org/drupal/system/files/pdfs/HardwareManual/HelicityDecoder/Programming%20the%20Helicity%20Decoder%20Module%20V5.pdf][JLab Helicity Decoder]]
+  With your *LINUXVME* environment variables set, compile and install
+  the library with
+  #+begin_src shell
+  make install
+  #+end_src
 
+** Use a test program to verify module connectivity
+   In ~test/~ you'll find some useful programs to test the library
+   installation and the module's connectivity in the VME crate.
+
+   Compile these with
+  #+begin_src shell
+    cd test/
+    make 
+  #+end_src
+
+*** ~hdStatus~ ~<optional address>~
+    Initialize the library and display the current status of the
+    helicity decoder at provided address, or default ~0xED0000~.
+    
+*** ~hdReadoutTest~ ~<optional address>~
+    Test readout of the helicity decoder with it's internal helicity
+    generator and internal trigger signals.
+
+** Add its configuration and readout to your readout list
+   In ~rol/~ you'll find an example readout list (~hd_list.c~) that
+   configures and reads out the helicity decoder.  Please try out the
+   example, before adapting the configuration for your own readout
+   list.
+
+   - Build it with
+  #+begin_src shell
+    cd rol/
+    make 
+  #+end_src
+
+   - Add it to your COOL configuration with filename ~hd_list.so~.
+  
+
+* Is there anything else planned?
+
+  - doxygen documentation on github pages
+  - configuration file
+    
