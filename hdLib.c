@@ -70,7 +70,6 @@ pthread_mutex_t hdMutex = PTHREAD_MUTEX_INITIALIZER;
  *
  */
 
-
 int32_t
 hdCheckAddresses()
 {
@@ -118,6 +117,11 @@ hdCheckAddresses()
  *     - 1 HD_INIT_FP        Front Panel (1)
  *     - 2 HD_INIT_VXS       VXS
  *
+ *  @param helSignalSrc Helicity signal source
+ *     - 0 Internal
+ *     - 1 External Fiber
+ *     - 2 External Copper
+ *
  *  @param iFlag Initialization bit mask
  *     - 0   Do not initialize the board, just setup the pointers to the registers
  *     - 1   Use Slave Fiber 5, instead of 1
@@ -128,7 +132,7 @@ hdCheckAddresses()
  */
 
 int32_t
-hdInit(uint32_t vAddr, uint8_t source, uint32_t iFlag)
+hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
 {
   uintptr_t laddr;
   uint32_t rval, boardID = 0, fwVersion = 0;
@@ -244,11 +248,31 @@ hdInit(uint32_t vAddr, uint8_t source, uint32_t iFlag)
     }
 
   /* Reset / initialize stuff here */
-  hdReset();
+  hdReset(0, 1);
   hdSetA32(hdA32Base);
 
   /* Set Clock, Trigger, Sync Source */
   hdSetSignalSources(source, source, source);
+
+  /* Set helicity source */
+  switch(helSignalSrc)
+    {
+    case HD_INIT_EXTERNAL_FIBER:
+      hdSetHelicitySource(0, 0, 0);
+      break;
+
+    case HD_INIT_EXTERNAL_COPPER:
+      hdSetHelicitySource(0, 1, 0);
+      break;
+
+    default:
+    case HD_INIT_INTERNAL_HELICITY:
+      hdSetHelicitySource(1, 0, 1);
+    }
+
+  /* Useful defaults */
+  hdSetBlocklevel(1);
+
 
 
   return OK;
@@ -339,16 +363,40 @@ hdStatus(int pflag)
 
 /**
  * @ingroup Config
- * @brief Hard Reset the module
+ * @brief Reset the module
+ *
+ * @param type Reset Type
+ *           0 Soft
+ *           1 Hard
+ *           2 Both
+ * @param clearA32 Flag to clear A32 settings
+ *           0 Restore A32 settings after reset
+ *           1 Wipe them out.  All of them.
  *
  * @return OK if successful, otherwise ERROR
  */
 
 int32_t
-hdReset()
+hdReset(uint8_t type, uint8_t clearA32)
 {
   int32_t rval = OK;
+  uint32_t wreg = 0;
   CHECKINIT;
+
+  switch(type)
+    {
+    case 0:
+      wreg = HD_CSR_SOFT_RESET;
+      break;
+    case 1:
+      wreg = HD_CSR_HARD_RESET;
+      break;
+    case 2:
+    default:
+      wreg = HD_CSR_SOFT_RESET | HD_CSR_HARD_RESET;
+    }
+
+  clearA32 = clearA32 ? 1 : 0;
 
   HLOCK;
   vmeWrite32(&hdp->csr, HD_CSR_HARD_RESET);
@@ -415,6 +463,24 @@ hdSetA32(uint32_t a32base)
 }
 
 /**
+ * @ingroup Status
+ * @brief Get the A32 Base
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+
+uint32_t
+hdGetA32()
+{
+  uint32_t rval;
+  HLOCK;
+  rval = hdA32Base;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
  * @ingroup Config
  * @brief Set the signal sources for the module
  *
@@ -438,9 +504,11 @@ int32_t
 hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
 {
   int32_t rval = OK;
+  uint32_t wreg = 0;
   CHECKINIT;
 
-  uint32_t wreg = 0;
+
+  /* Clock Source */
   switch(clkSrc)
     {
     case HD_INIT_INTERNAL:
@@ -461,6 +529,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
 	     __func__, clkSrc);
     }
 
+  /* Trigger Source */
   switch(trigSrc)
     {
     case HD_INIT_INTERNAL:
@@ -481,6 +550,7 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
 	     __func__, trigSrc);
     }
 
+  /* SyncReset Source */
   switch(srSrc)
     {
     case HD_INIT_INTERNAL:
@@ -513,8 +583,92 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
 }
 
 /**
+ * @ingroup Status
+ * @brief Get the clock, trigger, and syncreset source for the module
+ *
+ * @param *clkSrc Address to store Clock Source
+ *      0 Internal
+ *      1 Front Panel
+ *      2 VXS
+ * @param *trigSrc Address to store Trigger Source
+ *      0 Internal
+ *      1 Front Panel
+ *      2 VXS
+ * @param *srSrc Address to store SyncReset Source
+ *      0 Internal
+ *      1 Front Panel
+ *      2 VXS
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+
+int32_t
+hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc)
+{
+  int32_t rval = OK;
+  uint32_t rreg = 0, signal = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->ctrl1);
+  HUNLOCK;
+
+  /* Clock Source */
+  signal = rreg & HD_CTRL1_CLK_SRC_MASK;
+  switch(signal)
+    {
+    case HD_CTRL1_CLK_SRC_P0:
+      *clkSrc = HD_INIT_VXS;
+      break;
+
+    case HD_CTRL1_CLK_SRC_FP:
+      *clkSrc = HD_INIT_FP;
+      break;
+
+    case HD_CTRL1_CLK_SRC_INT:
+    default:
+      *clkSrc = HD_INIT_INTERNAL;
+    }
+
+  /* Trigger Source */
+  signal = rreg & HD_CTRL1_TRIG_SRC_MASK;
+  switch(signal)
+    {
+    case HD_CTRL1_TRIG_SRC_P0:
+      *trigSrc = HD_INIT_VXS;
+      break;
+
+    case HD_CTRL1_TRIG_SRC_FP:
+      *trigSrc = HD_INIT_FP;
+      break;
+
+    case HD_CTRL1_TRIG_SRC_SOFT:
+    default:
+      *trigSrc = HD_INIT_INTERNAL;
+    }
+
+  /* SyncReset Source */
+  signal = rreg & HD_CTRL1_SYNC_RESET_SRC_MASK;
+  switch(signal)
+    {
+    case HD_CTRL1_SYNC_RESET_SRC_P0:
+      *srSrc = HD_INIT_VXS;
+      break;
+
+    case HD_CTRL1_SYNC_RESET_SRC_FP:
+      *srSrc = HD_INIT_FP;
+      break;
+
+    case HD_CTRL1_SYNC_RESET_SRC_SOFT:
+    default:
+      *srSrc = HD_INIT_INTERNAL;
+    }
+
+  return rval;
+}
+/**
  * @ingroup Config
- * @brief Set the helicity source for the module
+ * @brief Configure helicity source, input, and output, for the module
  *
  * @param helSrc Helicity Source
  *      0 External
@@ -545,6 +699,328 @@ hdSetHelicitySource(uint8_t helSrc, uint8_t input, uint8_t output)
   vmeWrite32(&hdp->ctrl1,
 	     (vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_HEL_SRC_MASK) | wreg);
   HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the helicity source, input, and output for the module
+ *
+ * @param *helSrc Address to store Helicity Source
+ *      0 External
+ *      1 Internal
+ * @param *input Address to store External Source signal type
+ *      0 Fiber
+ *      1 Copper
+ * @param *output Address to store helicity signals routed to front panel
+ *      0 External
+ *      1 Internal
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+
+int32_t
+hdGetHelicitySource(uint8_t *helSrc, uint8_t *input, uint8_t *output)
+{
+  int32_t rval = OK;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->ctrl1) & HD_CTRL1_HEL_SRC_MASK;
+  HUNLOCK;
+
+  *helSrc = (rreg & HD_CTRL1_USE_INT_HELICITY) ? 1 : 0;
+  *input = (rreg & HD_CTRL1_USE_EXT_CU_IN) ? 1 : 0;
+  *output = (rreg & HD_CTRL1_INT_HELICITY_TO_FP) ? 1 : 0;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Set the Blocklevel for the module
+ *
+ * @param blklevel Block level [0-255]
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSetBlocklevel(uint8_t blklevel)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->blk_size, blklevel);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the blocklevel for the modules
+ *
+ * @return Blocklevel if successful, otherwise ERROR
+ */
+int32_t
+hdGetBlocklevel()
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  HLOCK;
+  rval = vmeRead32(&hdp->blk_size) & 0xFF;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Enable the decoder, triggers, and event building for the module
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdEnable()
+{
+  int32_t rval = OK;
+  uint32_t wreg = HD_CTRL2_DECODER_ENABLE | HD_CTRL2_GO | HD_CTRL2_EVENT_BUILD_ENABLE;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) | wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Disable the decoder, triggers, and event building for the module
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDisable()
+{
+  int32_t rval = OK;
+  uint32_t wreg = HD_CTRL2_DECODER_ENABLE | HD_CTRL2_GO | HD_CTRL2_EVENT_BUILD_ENABLE;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) & ~wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Generate a software trigger
+ *
+ * @param pflag Print Flag
+ *              option to print action to standard out
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdTrig(int pflag)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  if(pflag)
+    printf("%s: Software Trigger\n", __func__);
+
+  HLOCK;
+  vmeWrite32(&hdp->csr, HD_CSR_TRIGGER_PULSE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Generate a software SyncReset
+ *
+ * @param pflag Print Flag
+ *              option to print action to standard out
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSync(int pflag)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  if(pflag)
+    printf("%s: Software SyncReset\n", __func__);
+
+  HLOCK;
+  vmeWrite32(&hdp->csr, HD_CSR_SYNC_RESET_PULSE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the recovered shift register value(s)
+ *
+ * @param *recovered Address to put current recovered value
+ * @param *internalGenerator Address to put current internal generator value
+ *
+ * @return Blocklevel if successful, otherwise ERROR
+ */
+int32_t
+hdGetRecoveredShiftRegisterValue(uint32_t *recovered, uint32_t *internalGenerator)
+{
+  int32_t rval = OK;
+  int32_t rreg1 = 0, rreg2 = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg1 = vmeRead32(&hdp->recovered_shift_reg);
+
+  if(internalGenerator != NULL)
+    rreg2 = vmeRead32(&hdp->generator_shift_reg);
+
+  HUNLOCK;
+
+  *recovered = rreg1 & HD_RECOVERED_SHIFT_REG_MASK;
+
+  if(internalGenerator != NULL)
+    *internalGenerator = rreg2 & HD_GENERATOR_SHIFT_REG_MASK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Enable the helicity generator for the module
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdEnableHelicityGenerator()
+{
+  int32_t rval = OK;
+  uint32_t wreg = HD_CTRL2_INT_HELICITY_ENABLE;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) | wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Disable the helicity generator for the module
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDisableHelicityGenerator()
+{
+  int32_t rval = OK;
+  uint32_t wreg = HD_CTRL2_INT_HELICITY_ENABLE;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) & ~wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Configure the internal helicity generator
+ *
+ * @param pattern Helicity Pattern [0,3]
+ *              0 Pair
+ *              1 Quartet
+ *              2 Octet
+ *              3 Toggle
+ * @param windowDelay Helicity delay in windows
+ * @param settleTime Helicity settle time (1 count = 40ns)
+ * @param stableTime Helicity stable time (1 count = 40ns)
+ * @param seed Initial pseudorandom sequence seed
+*
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdHelicityGeneratorConfig(uint8_t pattern, uint8_t windowDelay,
+			  uint16_t settleTime, uint32_t stableTime,
+			  uint32_t seed)
+{
+  int32_t rval = OK;
+  uint32_t wreg1, wreg2, wreg3;
+  CHECKINIT;
+
+  if(pattern > 3)
+    {
+      printf("%s: ERROR: Invalid pattern (%d)\n",
+	     __func__, pattern);
+      return ERROR;
+    }
+
+  wreg1 = pattern | (windowDelay << 8) | (settleTime << 16);
+  wreg2 = stableTime & HD_HELICITY_CONFIG2_STABLE_TIME_MASK;
+  wreg3 = seed & HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK;
+
+  HLOCK;
+  vmeWrite32(&hdp->gen_config1, wreg1);
+  vmeWrite32(&hdp->gen_config2, wreg2);
+  vmeWrite32(&hdp->gen_config3, wreg3);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the configured parameeters for the internal helicity generator
+ *
+ * @param pattern Address to store Helicity Pattern [0,3]
+ *              0 Pair
+ *              1 Quartet
+ *              2 Octet
+ *              3 Toggle
+ * @param windowDelay Address to store Helicity delay in windows
+ * @param settleTime Address to store Helicity settle time (1 count = 40ns)
+ * @param stableTime Address to store Helicity stable time (1 count = 40ns)
+ * @param seed Initial Address to store pseudorandom sequence seed
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetHelicityGeneratorConfig(uint8_t *pattern, uint8_t *windowDelay,
+			     uint16_t *settleTime, uint32_t *stableTime,
+			     uint32_t *seed)
+{
+  int32_t rval = OK;
+  uint32_t rreg1, rreg2, rreg3;
+  CHECKINIT;
+
+  HLOCK;
+  rreg1 = vmeRead32(&hdp->gen_config1);
+  rreg2 = vmeRead32(&hdp->gen_config2);
+  rreg3 = vmeRead32(&hdp->gen_config3);
+  HUNLOCK;
+
+  *pattern = rreg1 & HD_HELICITY_CONFIG1_PATTERN_MASK;
+  *windowDelay = (rreg1 & HD_HELICITY_CONFIG1_HELICITY_DELAY_MASK) >> 8;
+  *settleTime = (rreg1 & HD_HELICITY_CONFIG1_HELICITY_SETTLE_MASK) >> 16;
+  *stableTime = rreg2 & HD_HELICITY_CONFIG2_STABLE_TIME_MASK;
+  *seed = rreg3 & HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK;
 
   return rval;
 }

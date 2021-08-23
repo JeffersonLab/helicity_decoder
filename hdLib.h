@@ -131,7 +131,7 @@ typedef struct hd_struct
 #define HD_HELICITY_CONFIG2_STABLE_TIME_MASK 0x00FFFFFF
 
 /* 0x28 helicity_config3 */
-#define HD_HELICITY_CONFIG2_PSEUDO_SEED_MASK 0x3FFFFFFF
+#define HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK 0x3FFFFFFF
 
 /* 0x30-0x38 control scaler Index definitions */
 #define HD_CONTROL_SCALER_TRIG1     0
@@ -177,16 +177,44 @@ typedef struct hd_struct
 #define HD_INIT_INTERNAL        0
 #define HD_INIT_FP              1
 #define HD_INIT_VXS             2
+#define HD_INIT_INTERNAL_HELICITY  0
+#define HD_INIT_EXTERNAL_FIBER     1
+#define HD_INIT_EXTERNAL_COPPER    2
 
 /* function prototypes */
 
 int32_t hdCheckAddresses();
-int32_t hdInit(uint32_t vAddr, uint8_t source, uint32_t iFlag);
+int32_t hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag);
 uint32_t hdFind();
 int32_t hdStatus(int pflag);
-int32_t hdReset();
+int32_t hdReset(uint8_t type, uint8_t clearA32);
 int32_t hdSetA32(uint32_t a32base);
 int32_t hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc);
+int32_t hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc);
 int32_t hdSetHelicitySource(uint8_t helSrc, uint8_t input, uint8_t output);
+int32_t hdGetHelicitySource(uint8_t *helSrc, uint8_t *input, uint8_t *output);
+
+int32_t hdSetBlocklevel(uint8_t blklevel);
+int32_t hdGetBlocklevel();
+
+int32_t hdEnable();
+int32_t hdDisable();
+
+int32_t hdTrig(int pflag);
+int32_t hdSync(int pflag);
+
+int32_t hdGetRecoveredShiftRegisterValue(uint32_t *recovered, uint32_t *internalGenerator);
+
+int32_t hdEnableHelicityGenerator();
+int32_t hdDisableHelicityGenerator();
+int32_t hdHelicityGeneratorConfig(uint8_t pattern, uint8_t windowDelay,
+				  uint16_t settleTime, uint32_t stableTime,
+				  uint32_t seed);
+
+int32_t hdGetHelicityGeneratorConfig(uint8_t *pattern, uint8_t *windowDelay,
+				     uint16_t *settleTime, uint32_t *stableTime,
+				     uint32_t *seed);
+
+
 
 #endif /* __HDLIBH__ */
