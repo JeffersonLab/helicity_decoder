@@ -34,6 +34,8 @@
 #define BLOCKLEVEL 1
 #define BUFFERLEVEL 1
 
+#define INTRANDOMPULSER
+
 /****************************************
  *  DOWNLOAD
  ****************************************/
@@ -68,10 +70,13 @@ rocDownload()
    *      TI_TRIGGER_TSREV2    4  Ribbon cable from Legacy TS module
    *      TI_TRIGGER_PULSER    5  TI Internal Pulser (Fixed rate and/or random)
    */
+#ifdef INTRANDOMPULSER
+  tiSetTriggerSource(TI_TRIGGER_PULSER); /* TS Internal Pulser */
+#else
   tiSetTriggerSource(TI_TRIGGER_TSINPUTS); /* TS Inputs enabled */
-
   /* Enable set specific TS input bits (1-6) */
   tiEnableTSInput( TI_TSINPUT_1 | TI_TSINPUT_2 );
+#endif
 
   /* Load the trigger table that associates
    *  pins 21/22 | 23/24 | 25/26 : trigger1
@@ -98,9 +103,9 @@ rocDownload()
 
   tiStatus(0);
 
+  /* Initialize the library and module with its internal clock*/
   hdInit(HELICITY_DECODER_ADDR, HD_INIT_INTERNAL, 0, 0);
   hdStatus(1);
-
 
   printf("rocDownload: User Download Executed\n");
 
@@ -116,21 +121,26 @@ rocPrestart()
   int stat;
   int islot;
 
-  /* Unlock the VME Mutex */
-  vmeBusUnlock();
-
   /* Set number of events per block (broadcasted to all connected TI Slaves)*/
   tiSetBlockLevel(blockLevel);
   printf("rocPrestart: Block Level set to %d\n",blockLevel);
 
   tiStatus(0);
 
-  /* Configure helicity decoder */
+  /* Switch helicity decoder to VXS master clock, trigger, syncreset */
+  hdSetSignalSources(HD_INIT_VXS, HD_INIT_VXS, HD_INIT_VXS);
+
+  /* Setting data input (0x100 = 2048 ns) and
+     trigger latency (0x40 = 512 ns) processing delays */
   hdSetProcDelay(0x100, 0x40);
 
-  hdHelicityGeneratorConfig(2, 0,
-			    0x40, 0x80,
-			    0xABCDEF01);
+  /* Using internal helicity generation for testing */
+  hdSetHelicitySource(1, 0, 1);
+  hdHelicityGeneratorConfig(2,     /* Pattern = 2 (OCTET) */
+			    0,     /* Window Delay = 0 (0 windows) */
+			    0x40,  /* SettleTime = 0x40 (512 ns) */
+			    0x80,  /* StableTime = 0x80 (1024 ns) */
+			    0xABCDEF01); /* Seed */
   hdEnableHelicityGenerator();
 
   hdStatus(0);
