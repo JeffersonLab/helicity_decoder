@@ -217,6 +217,7 @@ int32_t hdConfirmProcDelay(uint8_t pflag);
 int32_t hdSetBERR(uint8_t enable);
 int32_t hdGetBERR(uint8_t enable);
 
+int32_t hdEnableDecoder();
 int32_t hdEnable();
 int32_t hdDisable();
 

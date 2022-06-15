@@ -1153,6 +1153,28 @@ hdGetBERR(uint8_t enable)
 
 /**
  * @ingroup Config
+ * @brief Enable the decoder for the module.
+ *     Useful if triggers will come to the module < 1s after hdEnable().
+ *     Call this in prestart.
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdEnableDecoder()
+{
+  int32_t rval = OK;
+  uint32_t wreg = HD_CTRL2_DECODER_ENABLE;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl2, vmeRead32(&hdp->ctrl2) | wreg);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
  * @brief Enable the decoder, triggers, and event building for the module
  *
  * @return OK if successful, otherwise ERROR

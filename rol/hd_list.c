@@ -134,6 +134,9 @@ rocPrestart()
      trigger latency (0x40 = 512 ns) processing delays */
   hdSetProcDelay(0x100, 0x40);
 
+  /* Enable the module decoder, well before triggers are enabled */
+  hdEnableDecoder();
+
   /* Using internal helicity generation for testing */
   hdSetHelicitySource(1, 0, 1);
   hdHelicityGeneratorConfig(2,     /* Pattern = 2 (OCTET) */
