@@ -1139,7 +1139,7 @@ hdSetBERR(uint8_t enable)
  * @return 1 if enabled, 0 if disabled, otherwise ERROR
  */
 int32_t
-hdGetBERR(uint8_t enable)
+hdGetBERR()
 {
   int32_t rval = 0;
   CHECKINIT;
@@ -1563,8 +1563,8 @@ hdPrintScalers()
   if(hdReadScalers(scalers, 1))
     {
       printf("  Helicity Scalers:\n");
-      printf("    T_SETTLE rising  = 0x%08x (%d)\n", scalers[0], scalers[0]);
-      printf("    T_SETTLE falling = 0x%08x (%d)\n", scalers[1], scalers[1]);
+      printf("    T_SETTLE falling = 0x%08x (%d)\n", scalers[0], scalers[0]);
+      printf("    T_SETTLE rising  = 0x%08x (%d)\n", scalers[1], scalers[1]);
       printf("    PATTERN_SYNC     = 0x%08x (%d)\n", scalers[2], scalers[2]);
       printf("    PAIR_SYNC        = 0x%08x (%d)\n", scalers[3], scalers[3]);
       printf("\n");
@@ -1953,7 +1953,7 @@ hdDecodeData(uint32_t data)
 	    {
 	      if(time_last == 1)
 		{
-		  hd_data.time_2 = (data & 0xFFFFFF);
+		  hd_data.time_2 = (data & 0xFFFFF);
 		  if(i_print)
 		    printf("%8X - TRIGGER TIME 2 - time = %X\n", data,
 			   hd_data.time_2);
@@ -2039,4 +2039,108 @@ hdDecodeData(uint32_t data)
 
     }
 
+}
+
+/**
+ * @ingroup Config
+ * @brief Set the delay after PATTERN_SYNC to generate test trigger.
+ *
+ * @param delay Delay value [0-262143]
+ *            1 count = 8 ns
+ *            max = 2.097 us
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSetInternalTestTriggerDelay(uint32_t delay)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  if(delay > HD_INT_TESTTRIG_DELAY_MASK)
+    {
+      printf("%s: ERROR: Invalid delay %d (0x%x).  MAX = %d (0x%x)\n",
+	     __func__, delay, delay,
+	     HD_INT_TESTTRIG_DELAY_MASK, HD_INT_TESTTRIG_DELAY_MASK);
+      return ERROR;
+    }
+
+  HLOCK;
+  vmeWrite32(&hdp->int_testtrig_delay, delay);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Get the delay after PATTERN_SYNC to generate test trigger.
+ *
+ * @param delay Address for Delay value [0-262143]
+ *            1 count = 8 ns
+ *            max = 2.097 us
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetInternalTestTriggerDelay(uint32_t *delay)
+{
+  int32_t rval = OK;
+  CHECKINIT;
+
+  HLOCK;
+  *delay = vmeRead32(&hdp->int_testtrig_delay) & HD_INT_TESTTRIG_DELAY_MASK;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Enable generation of the internal test trigger
+ *
+ * @param pflag Print Flag
+ *           !0 = Print Status to Standard Out
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdEnableInternalTestTrigger(int32_t pflag)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  if(pflag)
+    printf("%s: ENABLE\n", __func__);
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) | HD_CTRL1_INT_TESTTRIG_ENABLE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Disable generation of the internal test trigger
+ *
+ * @param pflag Print Flag
+ *           !0 = Print Status to Standard Out
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDisableInternalTestTrigger(int32_t pflag)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  if(pflag)
+    printf("%s: DISABLE\n", __func__);
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_INT_TESTTRIG_ENABLE);
+  HUNLOCK;
+
+  return rval;
 }

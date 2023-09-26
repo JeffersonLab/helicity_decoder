@@ -19,7 +19,7 @@ typedef struct hd_struct
   /* 0x0020 */ volatile uint32_t gen_config1;
   /* 0x0024 */ volatile uint32_t gen_config2;
   /* 0x0028 */ volatile uint32_t gen_config3;
-  /* 0x002C          */ uint32_t _blank0;
+  /* 0x002C */ volatile uint32_t int_testtrig_delay;
   /* 0x0030 */ volatile uint32_t trig1_scaler;
   /* 0x0034 */ volatile uint32_t trig2_scaler;
   /* 0x0038 */ volatile uint32_t sync_scaler;
@@ -86,6 +86,7 @@ typedef struct hd_struct
 #define HD_CTRL1_SYNC_RESET_SRC_FP2  (2 << 5)
 #define HD_CTRL1_SYNC_RESET_SRC_SOFT (3 << 5)
 #define HD_CTRL1_SOFT_CONTROL_ENABLE (1 << 7)
+#define HD_CTRL1_INT_TESTTRIG_ENABLE (1 << 8)
 #define HD_CTRL1_INT_ENABLE          (1 << 16)
 #define HD_CTRL1_BERR_ENABLE         (1 << 17)
 #define HD_CTRL1_HEL_SRC_MASK        0x001c0000
@@ -135,6 +136,9 @@ typedef struct hd_struct
 /* 0x28 helicity_config3 */
 #define HD_HELICITY_CONFIG3_PSEUDO_SEED_MASK 0x3FFFFFFF
 
+/* 0x2C int_testtrig_delay */
+#define HD_INT_TESTTRIG_DELAY_MASK 0x0003FFFF
+
 /* 0x30-0x38 control scaler Index definitions */
 #define HD_CONTROL_SCALER_TRIG1     0
 #define HD_CONTROL_SCALER_TRIG2     1
@@ -147,8 +151,8 @@ typedef struct hd_struct
 #define HD_BLOCKS_ON_BOARD_MASK 0x000FFFFF
 
 /* 0x44-0x54 scaler Index definitions */
-#define HD_HELICITY_SCALER_TSTABLE_RISING    0
-#define HD_HELICITY_SCALER_TSTABLE_FALLING   1
+#define HD_HELICITY_SCALER_TSTABLE_FALLING   0
+#define HD_HELICITY_SCALER_TSTABLE_RISING    1
 #define HD_HELICITY_SCALER_PATTERN_SYNC      2
 #define HD_HELICITY_SCALER_PAIR_SYNC         3
 #define HD_HELICITY_SCALER_HELICITY_WINDOWS  4
@@ -215,7 +219,7 @@ int32_t hdGetProcDelay(uint16_t *dataInputDelay, uint16_t *triggerLatencyDelay);
 int32_t hdConfirmProcDelay(uint8_t pflag);
 
 int32_t hdSetBERR(uint8_t enable);
-int32_t hdGetBERR(uint8_t enable);
+int32_t hdGetBERR();
 
 int32_t hdEnableDecoder();
 int32_t hdEnable();
