@@ -253,4 +253,9 @@ int32_t hdGetHelicityGeneratorConfig(uint8_t *pattern, uint8_t *windowDelay,
 int32_t hdPrintHelicityGeneratorConfig();
 void hdDecodeData(uint32_t data);
 
+int32_t hdSetInternalTestTriggerDelay(uint32_t delay);
+int32_t hdGetInternalTestTriggerDelay(uint32_t *delay);
+int32_t hdEnableInternalTestTrigger(int32_t pflag);
+int32_t hdDisableInternalTestTrigger(int32_t pflag);
+
 #endif /* __HDLIBH__ */

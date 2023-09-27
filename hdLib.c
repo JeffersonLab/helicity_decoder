@@ -369,6 +369,7 @@ hdStatus(int pflag)
   READHD(blk_size);
   READHD(delay);
   READHD(intr);
+  READHD(int_testtrig_delay);
   HUNLOCK;
 
 #ifndef PREG
@@ -392,6 +393,7 @@ hdStatus(int pflag)
       PREG(\n,intr);
       PREG(\t,blk_size);
       PREG(\n,delay);
+      PREG(\n,int_testtrig_delay);
     }
 
   printf("\n");
@@ -464,11 +466,12 @@ hdStatus(int pflag)
   printf("\n");
 
 
-  printf("                          Event       Helicity    Force\n");
-  printf("  Decoder     Triggers    Build       Generator   Busy\n");
+  printf("                                                              Internal\n");
+  printf("                          Event       Helicity    Force       Test Trigger\n");
+  printf("  Decoder     Triggers    Build       Generator   Busy        Status     Delay\n");
   printf("  ------------------------------------------------------------------------------\n");
   /*
-   *     "  Disabled    Disabled    Disabled    Disabled    Disabled"
+   *     "  Disabled    Disabled    Disabled    Disabled    Disabled    Disabled   0x3FFFF"
   */
 
   printf("  %s    ",
@@ -485,6 +488,13 @@ hdStatus(int pflag)
 
   printf("%s    ",
 	 rv.ctrl2 & HD_CTRL2_FORCE_BUSY ? "ENABLED " : "Disabled");
+
+  printf("%s   ",
+	 rv.ctrl1 & HD_CTRL1_INT_TESTTRIG_ENABLE ? "ENABLED " : "Disabled");
+
+  printf("0x%05x",
+	 rv.int_testtrig_delay & HD_INT_TESTTRIG_DELAY_MASK);
+
   printf("\n");
 
   printf("\n");
