@@ -123,9 +123,8 @@ hdCheckAddresses()
  *     - 2 External Copper
  *
  *  @param iFlag Initialization bit mask
- *     - 0   Do not initialize the board, just setup the pointers to the registers
- *     - 1   Use Slave Fiber 5, instead of 1
- *     - 2   Ignore firmware check
+ *     - 0   Ignore firmware check
+ *     - 1   Do not initialize the board, just setup the pointers to the registers
  *
  *  @return OK if successful, otherwise ERROR.
  *
@@ -2150,6 +2149,57 @@ hdDisableInternalTestTrigger(int32_t pflag)
 
   HLOCK;
   vmeWrite32(&hdp->ctrl1, vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_INT_TESTTRIG_ENABLE);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Return the status of PLL Lock for System and Local clock
+ *
+ * @param system PLL Lock for System Clock
+ *          0 / 1 = Unlocked / Locked
+ * @param local PLL Lock for Local Clock
+ *          0 / 1 = Unlocked / Locked
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetClockPLLStatus(int32_t *system, int32_t *local)
+{
+  int32_t rval = 0;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->csr);
+
+  *system = (rreg & HD_CSR_SYSTEM_CLK_PLL_LOCKED) ? 1 : 0;
+  *local = (rreg & HD_CSR_LOCAL_CLK_PLL_LOCKED) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Return the slot number
+ *
+ * @param system Slot Number [1,21]
+ *
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetSlotNumber(uint32_t *slotnumber)
+{
+  int32_t rval = OK;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->intr);
+  *slotnumber = (rreg & HD_INT_GEO_MASK) >> 16;
   HUNLOCK;
 
   return rval;

@@ -31,7 +31,7 @@ CC			= $(CROSS_COMPILE)gcc
 AR                      = ar
 RANLIB                  = ranlib
 INCS			= -I. -I../ -I${LINUXVME_INC} ${CODA_VME_INC}
-CFLAGS			= -L. -L../ -L${LINUXVME_LIB} ${CODA_LIB} -lrt -ljvme -lhd
+CFLAGS			= -L. -L../ -L${LINUXVME_LIB} ${CODA_LIB} -lrt -ljvme -lhd -lti -lsd -lts -lstdc++
 ifeq ($(DEBUG),1)
 	CFLAGS		+= -Wall -Wno-unused -g
 endif

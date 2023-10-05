@@ -257,5 +257,7 @@ int32_t hdSetInternalTestTriggerDelay(uint32_t delay);
 int32_t hdGetInternalTestTriggerDelay(uint32_t *delay);
 int32_t hdEnableInternalTestTrigger(int32_t pflag);
 int32_t hdDisableInternalTestTrigger(int32_t pflag);
+int32_t hdGetClockPLLStatus(int32_t *system, int32_t *local);
+int32_t hdGetSlotNumber(uint32_t *slotnumber);
 
 #endif /* __HDLIBH__ */
