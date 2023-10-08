@@ -19,7 +19,6 @@
 #include "tiLib.h"
 #include "sdLib.h"
 
-char *progname;
 //
 //  Just check status of PLL for system and local clock
 //
@@ -166,6 +165,21 @@ testTrigger2()
   return rval;
 }
 
+int32_t
+status(char *choice)
+{
+  if(strcasecmp(choice, "ti") == 0)
+    tiStatus(1);
+
+  if(strcasecmp(choice, "sd") == 0)
+    sdStatus(1);
+
+  if(strcasecmp(choice, "hd") == 0)
+    hdStatus(1);
+
+  return 0;
+}
+
 #include <readline/readline.h>
 int com_quit(char *arg);
 int com_help(char *arg);
@@ -180,11 +194,12 @@ typedef struct
 COMMAND commands[] = {
   {"help", com_help, "Display this text"},
   {"?", com_help, "Synonym for `help'"},
-  {"clock", testClock, "Check Clock PLL Lock"},
+  {"clock", testClock, "Check Clock PLL"},
   {"syncreset", testSyncReset, "Check SYNCRESET"},
   {"busy", testBusyOut, "Test BUSYOUT"},
   {"trig1", testTrigger1, "Check TRIG1"},
   {"trig2", testTrigger2, "Check TRIG2"},
+  {"status", status, "Status for TI, SD, HD"},
   {"quit", com_quit, "Quit"},
   {(char *) NULL, (rl_icpfunc_t *) NULL, (char *) NULL}
 };
@@ -195,7 +210,7 @@ main(int argc, char *argv[])
 {
   int stat;
   uint32_t address=0;
-  progname = dupstr(argv[0]);
+  char *progname = dupstr(argv[0]);
 
   if (argc > 1)
     {
@@ -217,7 +232,7 @@ main(int argc, char *argv[])
   vmeBusLock();
 
   // TI init + config
-  stat = tiInit(0,0,0);
+  stat = tiInit(0,0,TI_INIT_SKIP_FIRMWARE_CHECK);
 
   // resets required before syncs and trigs
   tiClockReset();
