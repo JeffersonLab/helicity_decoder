@@ -45,29 +45,53 @@ testClock()
 //
 
 int32_t
-testSyncReset()
+testSyncReset(char *char_nsync)
 {
   int32_t rval = OK;
   volatile uint32_t scalers[9];
-  printf("%s: ----------------------------------------------------------------------\n", __func__);
+  uint32_t initial_count = 0, final_count = 0;
+
+  int32_t nsync = atoi(char_nsync);
+  if (nsync <= 0)
+    nsync = 100;
+
+
+  printf("%s(%d): ----------------------------------------------------------------------\n",
+	 __func__, nsync);
 
   if(hdReadScalers(scalers, 1))
     {
+      initial_count = scalers[6];
+#ifdef DEBUG
       printf("%s:\n\t SyncReset = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[6], scalers[6]);
+#endif
     }
 
   int32_t isync;
-  for(isync = 0; isync < 100; isync++)
+  for(isync = 0; isync < nsync; isync++)
     tiSyncReset(0);
 
   if(hdReadScalers(scalers, 1))
     {
+      final_count = scalers[6];
+#ifdef DEBUG
       printf("%s:\n\t SyncReset = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[6], scalers[6]);
+#endif
     }
+
+  printf("\t\tSyncReset sent: %d\n", nsync);
+  printf("\t\t initial count: %d\n", initial_count);
+  printf("\t\t   final count: %d\n", final_count);
+  printf("\t\t  ----------------\n");
+  uint32_t diff = final_count - initial_count;
+  printf("\t\t   %d %s %d\n", nsync,
+	 (diff == nsync) ? "=" : "!=",
+	 diff);
+
 
   return rval;
 }
@@ -82,19 +106,19 @@ testBusyOut()
   int32_t rval = OK;
   uint8_t status = 0, ti_status = 0;
   printf("%s: ----------------------------------------------------------------------\n", __func__);
+
   hdBusy(0);
   hdBusyStatus(&status);
   ti_status = tiGetSWBBusy(0);
 
-  printf("%s:\n\t Busy off     status = %d     ti_status = %d\n",
+  printf("%s:\n\t Busy off     HD status = %d     ti_status = %d\n",
 	 __func__,
 	 status, ti_status);
 
   hdBusy(1);
   hdBusyStatus(&status);
   ti_status = tiGetSWBBusy(0);
-
-  printf("%s:\n\t Busy ON      status = %d     ti_status = %d\n",
+  printf("%s:\n\t Busy ON      HD status = %d     ti_status = %d\n",
 	 __func__,
 	 status, ti_status);
 
@@ -108,28 +132,63 @@ testBusyOut()
 //
 
 int32_t
-testTrigger1()
+testTrigger1(char *char_ntrig)
 {
   int32_t rval = OK;
   volatile uint32_t scalers[9];
-  printf("%s: ----------------------------------------------------------------------\n", __func__);
+  uint32_t initial_count = 0, final_count = 0;
 
+  int32_t ntrig = atoi(char_ntrig);
+  if(ntrig <= 0)
+    ntrig = 100;
+  if(ntrig > 0xffff)
+    ntrig = 0xffff;
+
+  printf("%s(%d): ----------------------------------------------------------------------\n",
+	 __func__, ntrig);
+
+  int32_t wait_time = ntrig * 50;
+
+  tiSyncReset(1);
+
+  hdEnable(0);
   if(hdReadScalers(scalers, 1))
     {
+      initial_count = scalers[4];
+#ifdef DEBUG
       printf("%s:\n\t Trig1 = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[4], scalers[4]);
+#endif
     }
 
-  tiSoftTrig(1, 1000, 100, 0);
+
+  tiResetBlockReadout();
+  tiEnableTriggerSource();
+
+  tiSoftTrig(1, ntrig, 1000, 0);
+  usleep(wait_time);
+  tiDisableTriggerSource(0);
+  hdDisable(0);
 
   if(hdReadScalers(scalers, 1))
     {
+      final_count = scalers[4];
+#ifdef DEBUG
       printf("%s:\n\t Trig1 = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[4], scalers[4]);
+#endif
     }
 
+  printf("\t\t    trig1 sent: %d\n", ntrig);
+  printf("\t\t initial count: %d\n", initial_count);
+  printf("\t\t   final count: %d\n", final_count);
+  printf("\t\t  ----------------\n");
+  uint32_t diff = final_count - initial_count;
+  printf("\t\t   %d %s %d\n", ntrig,
+	 (diff == ntrig) ? "=" : "!=",
+	 diff);
 
   return rval;
 }
@@ -139,28 +198,63 @@ testTrigger1()
 //
 
 int32_t
-testTrigger2()
+testTrigger2(char *char_ntrig)
 {
   int32_t rval = OK;
   volatile uint32_t scalers[9];
-  printf("%s: ----------------------------------------------------------------------\n", __func__);
+  uint32_t initial_count = 0, final_count = 0;
 
+
+  int32_t ntrig = atoi(char_ntrig);
+  if(ntrig <= 0)
+    ntrig = 100;
+  if(ntrig > 0xffff)
+    ntrig = 0xffff;
+
+  printf("%s(%d): ----------------------------------------------------------------------\n",
+	 __func__, ntrig);
+
+  int32_t wait_time = ntrig * 50;
+
+  tiSyncReset(1);
+
+  hdEnable(0);
   if(hdReadScalers(scalers, 1))
     {
+      initial_count = scalers[5];
+#ifdef DEBUG
       printf("%s:\n\t Trig2 = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[5], scalers[5]);
+#endif
     }
 
-  tiSoftTrig(2, 1000, 100, 0);
+  tiEnableTriggerSource();
+
+  tiSoftTrig(2, ntrig, 1000, 0);
+
+  usleep(wait_time);
+  tiDisableTriggerSource(0);
+  hdDisable(0);
 
   if(hdReadScalers(scalers, 1))
     {
+      final_count = scalers[5];
+#ifdef DEBUG
       printf("%s:\n\t Trig2 = 0x%08x (%d)\n",
 	     __func__,
 	     scalers[5], scalers[5]);
+#endif
     }
 
+  printf("\t\t    trig2 sent: %d\n", ntrig);
+  printf("\t\t initial count: %d\n", initial_count);
+  printf("\t\t   final count: %d\n", final_count);
+  printf("\t\t  ----------------\n");
+  uint32_t diff = final_count - initial_count;
+  printf("\t\t   %d %s %d\n", ntrig,
+	 (diff == ntrig) ? "=" : "!=",
+	 diff);
 
   return rval;
 }
@@ -176,6 +270,42 @@ status(char *choice)
 
   if(strcasecmp(choice, "hd") == 0)
     hdStatus(1);
+
+  return 0;
+}
+
+int32_t
+enable(char *choice)
+{
+  if((strlen(choice) == 0) | (strcasecmp(choice, "hd") == 0))
+    {
+      printf("%s: %s\n", __func__, "hd");
+      hdEnable();
+    }
+
+  return 0;
+}
+
+int32_t
+disable(char *choice)
+{
+  if((strlen(choice) == 0) | (strcasecmp(choice, "hd") == 0))
+    {
+      printf("%s: %s\n", __func__, "hd");
+      hdDisable();
+    }
+
+  return 0;
+}
+
+int32_t
+reset(char *choice)
+{
+  if((strlen(choice) == 0) | (strcasecmp(choice, "hd") == 0))
+    {
+      printf("%s: %s\n", __func__, "hd");
+      hdReset(0, 0);
+    }
 
   return 0;
 }
@@ -200,6 +330,9 @@ COMMAND commands[] = {
   {"trig1", testTrigger1, "Check TRIG1"},
   {"trig2", testTrigger2, "Check TRIG2"},
   {"status", status, "Status for TI, SD, HD"},
+  {"enable", enable, "Enable HD"},
+  {"disable", disable, "Disable HD"},
+  {"reset", reset, "Reset HD"},
   {"quit", com_quit, "Quit"},
   {(char *) NULL, (rl_icpfunc_t *) NULL, (char *) NULL}
 };
@@ -233,12 +366,18 @@ main(int argc, char *argv[])
 
   // TI init + config
   stat = tiInit(0,0,TI_INIT_SKIP_FIRMWARE_CHECK);
+  tiBusyOnBufferLevel(0);
+  tiSetBlockBufferLevel(0);
+  tiSetBusySource(TI_BUSY_SWB, 1);
+  tiSetTriggerSource(5);
+  tiDisableDataReadout();
 
   // resets required before syncs and trigs
   tiClockReset();
   taskDelay(1);
   tiTrigLinkReset();
   taskDelay(1);
+  tiSyncReset(1);
 
   // sd init
   stat = sdInit(0);

@@ -200,11 +200,12 @@ com_help(char *arg)
   register int i;
   int printed = 0;
 
+  printf("\n");
   for(i = 0; commands[i].name; i++)
     {
       if(!*arg || (strcmp(arg, commands[i].name) == 0))
 	{
-	  printf("%s\t\t%s.\n", commands[i].name, commands[i].doc);
+	  printf("%15s   %s.\n", commands[i].name, commands[i].doc);
 	  printed++;
 	}
     }
@@ -229,6 +230,8 @@ com_help(char *arg)
       if(printed)
 	printf("\n");
     }
+
+  printf("\n");
   return (0);
 }
 
