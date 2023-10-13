@@ -1339,8 +1339,9 @@ hdBERRStatus()
 /**
  * @ingroup Status
  * @brief Get the BUSY status
+ * @param latched Returned value for latched busy state
  *
- * @return 1 if module asserted BERR, 0 if not, otherwise ERROR
+ * @return 1 if module is BUSY, 0 if not, otherwise ERROR
  */
 int32_t
 hdBusyStatus(uint8_t *latched)
@@ -1358,7 +1359,7 @@ hdBusyStatus(uint8_t *latched)
     {
       *latched = (rreg & HD_CSR_BUSY_LATCHED) ? 1 : 0;
 
-      if(*latched) /* Clear if it's latched */
+      if((*latched) == 1)/* Clear if it's latched */
 	vmeWrite32(&hdp->csr, HD_CSR_BUSY_LATCHED);
     }
   HUNLOCK;

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <libgen.h>
 #include "jvme.h"
 #include "hdLib.h"
 #include "tiLib.h"
@@ -27,7 +28,8 @@ int32_t
 testClock()
 {
   int32_t rval = OK;
-  printf("%s: ----------------------------------------------------------------------\n", __func__);
+  printf("----------------------------------------------------------------------\n%s:\n",
+	 __func__);
 
   int32_t system = 0, local = 0;
   rval = hdGetClockPLLStatus(&system, &local);
@@ -56,7 +58,7 @@ testSyncReset(char *char_nsync)
     nsync = 100;
 
 
-  printf("%s(%d): ----------------------------------------------------------------------\n",
+  printf("----------------------------------------------------------------------\n%s(%d):\n",
 	 __func__, nsync);
 
   if(hdReadScalers(scalers, 1))
@@ -101,28 +103,63 @@ testSyncReset(char *char_nsync)
 //
 
 int32_t
-testBusyOut()
+testBusyOut(char *char_choice)
 {
   int32_t rval = OK;
-  uint8_t status = 0, ti_status = 0;
-  printf("%s: ----------------------------------------------------------------------\n", __func__);
+  uint8_t status = 0, latched = 0, ti_status = 0;
+  printf("----------------------------------------------------------------------\n");
 
-  hdBusy(0);
-  hdBusyStatus(&status);
-  ti_status = tiGetSWBBusy(0);
+  printf("%s(choice = %s):\n",
+	 __func__, char_choice);
 
-  printf("%s:\n\t Busy off     HD status = %d     ti_status = %d\n",
-	 __func__,
-	 status, ti_status);
+  if(strcasecmp(char_choice, "on") == 0)
+    {
+      hdBusy(1);
+      status = hdBusyStatus(&latched);
+      ti_status = tiGetSWBBusy(0);
+      printf("%s:\n\t Busy ON      HD status = %d   latched = %d     ti_status = %d\n",
+	     __func__,
+	     status, latched, ti_status);
 
-  hdBusy(1);
-  hdBusyStatus(&status);
-  ti_status = tiGetSWBBusy(0);
-  printf("%s:\n\t Busy ON      HD status = %d     ti_status = %d\n",
-	 __func__,
-	 status, ti_status);
+      return rval;
+    }
+  else if(strcasecmp(char_choice, "off") == 0)
+    {
+      hdBusy(0);
+      status = hdBusyStatus(&latched);
+      ti_status = tiGetSWBBusy(0);
+      printf("%s:\n\t Busy OFF      HD status = %d   latched = %d     ti_status = %d\n",
+	     __func__,
+	     status, latched, ti_status);
 
-  hdBusy(0);
+      return rval;
+    }
+  else if(strcasecmp(char_choice, "status") == 0)
+    {
+      status = hdBusyStatus(&latched);
+      ti_status = tiGetSWBBusy(0);
+      printf("%s:\n\t Busy STATUS  HD status = %d   latched = %d     ti_status = %d\n",
+	     __func__,
+	     status, latched, ti_status);
+    }
+  else
+    {
+      hdBusy(0);
+      status = hdBusyStatus(&latched);
+      ti_status = tiGetSWBBusy(0);
+      printf("%s:\n\t Busy OFF     HD status = %d   latched = %d     ti_status = %d\n",
+	     __func__,
+	     status, latched, ti_status);
+
+      hdBusy(1);
+      status = hdBusyStatus(&latched);
+      ti_status = tiGetSWBBusy(0);
+      printf("%s:\n\t Busy ON      HD status = %d   latched = %d     ti_status = %d\n",
+	     __func__,
+	     status, latched, ti_status);
+
+      hdBusy(0);
+    }
 
   return rval;
 }
@@ -144,7 +181,7 @@ testTrigger1(char *char_ntrig)
   if(ntrig > 0xffff)
     ntrig = 0xffff;
 
-  printf("%s(%d): ----------------------------------------------------------------------\n",
+  printf("----------------------------------------------------------------------\n%s(%d):\n",
 	 __func__, ntrig);
 
   int32_t wait_time = ntrig * 50;
@@ -211,7 +248,7 @@ testTrigger2(char *char_ntrig)
   if(ntrig > 0xffff)
     ntrig = 0xffff;
 
-  printf("%s(%d): ----------------------------------------------------------------------\n",
+  printf("----------------------------------------------------------------------\n%s(%d):\n",
 	 __func__, ntrig);
 
   int32_t wait_time = ntrig * 50;
@@ -268,7 +305,7 @@ status(char *choice)
   if(strcasecmp(choice, "sd") == 0)
     sdStatus(1);
 
-  if(strcasecmp(choice, "hd") == 0)
+  if((strcasecmp(choice, "hd") == 0) || (strlen(choice)==0))
     hdStatus(1);
 
   return 0;
@@ -305,6 +342,11 @@ reset(char *choice)
     {
       printf("%s: %s\n", __func__, "hd");
       hdReset(0, 0);
+      hdSetBlocklevel(1);
+
+      hdSetProcDelay(0x100, 0x40);
+
+      hdSetBERR(1);
     }
 
   return 0;
@@ -325,11 +367,11 @@ COMMAND commands[] = {
   {"help", com_help, "Display this text"},
   {"?", com_help, "Synonym for `help'"},
   {"clock", testClock, "Check Clock PLL"},
-  {"syncreset", testSyncReset, "Check SYNCRESET"},
-  {"busy", testBusyOut, "Test BUSYOUT"},
-  {"trig1", testTrigger1, "Check TRIG1"},
-  {"trig2", testTrigger2, "Check TRIG2"},
-  {"status", status, "Status for TI, SD, HD"},
+  {"syncreset", testSyncReset, "Check SYNCRESET.  N=100 default"},
+  {"busy", testBusyOut, "Test BUSYOUT. choice={off, on, status}. On + Off default"},
+  {"trig1", testTrigger1, "Check TRIG1. N=100 default"},
+  {"trig2", testTrigger2, "Check TRIG2. N=100 default"},
+  {"status", status, "Status for TI, SD, HD. choice={ti, sd, hd}. hd default"},
   {"enable", enable, "Enable HD"},
   {"disable", disable, "Disable HD"},
   {"reset", reset, "Reset HD"},
@@ -343,7 +385,7 @@ main(int argc, char *argv[])
 {
   int stat;
   uint32_t address=0;
-  char *progname = dupstr(argv[0]);
+  char *progname = basename(dupstr(argv[0]));
 
   if (argc > 1)
     {
@@ -387,11 +429,11 @@ main(int argc, char *argv[])
 
   uint32_t hd_slotnumber = 0;
   hdGetSlotNumber(&hd_slotnumber);
-  hdStatus(1);
+  /* hdStatus(1); */
 
   // Enable BUSY from helicity decoder to TI
   sdSetActiveVmeSlots(1 << hd_slotnumber);
-  sdStatus(1);
+  /* sdStatus(1); */
 
   initialize_readline(progname);	/* Bind our completer. */
   com_help("");
