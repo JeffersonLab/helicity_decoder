@@ -49,6 +49,10 @@ clean distclean:
 	@echo " CC     $@"
 	${Q}$(CC) $(CFLAGS) $(INCS) -o $@ $<
 
+hdTestVXS: hdTestVXS.c
+	@echo " CC     $@"
+	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
+
 %.d: %.c
 	@echo " DEP    $@"
 	@set -e; rm -f $@; \
