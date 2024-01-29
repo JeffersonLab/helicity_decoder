@@ -264,6 +264,6 @@ int32_t hdDisableInternalTestTrigger(int32_t pflag);
 int32_t hdGetClockPLLStatus(int32_t *system, int32_t *local);
 int32_t hdGetSlotNumber(uint32_t *slotnumber);
 
-int32_t hdSetHelicityInversion(int32_t fiber_input, int32_t cu_input, int32_t cu_output);
-int32_t hdGetHelicityInversion(int32_t *fiber_input, int32_t *cu_input, int32_t *cu_output);
+int32_t hdSetHelicityInversion(uint8_t fiber_input, uint8_t cu_input, uint8_t cu_output);
+int32_t hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_output);
 #endif /* __HDLIBH__ */

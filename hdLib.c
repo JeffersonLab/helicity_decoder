@@ -2213,19 +2213,20 @@ hdGetSlotNumber(uint32_t *slotnumber)
  * @return OK if successful, otherwise ERROR;
  */
 int32_t
-hdSetHelicityInversion(int32_t fiber_input, int32_t cu_input, int32_t cu_output)
+hdSetHelicityInversion(uint8_t fiber_input, uint8_t cu_input, uint8_t cu_output)
 {
   int32_t rval = 0;
+  uint32_t rset = 0;
   CHECKINIT;
 
-  fiber_input = fiber_input ? HD_CTRL1_INVERT_FIBER_INPUT : 0;
-  cu_input = cu_input ? HD_CTRL1_INVERT_CU_INPUT : 0;
-  cu_output = cu_output ? HD_CTRL1_INVERT_CU_OUTPUT : 0;
+  rset = fiber_input ? HD_CTRL1_INVERT_FIBER_INPUT : 0;
+  rset |= cu_input ? HD_CTRL1_INVERT_CU_INPUT : 0;
+  rset |= cu_output ? HD_CTRL1_INVERT_CU_OUTPUT : 0;
 
   HLOCK;
   vmeWrite32(&hdp->ctrl1,
-	     ((vmeRead32(&hdp->ctrl1) &~ HD_CTRL1_INVERT_MASK) |
-	      (fiber_input | cu_input | cu_output) ));
+	     ((vmeRead32(&hdp->ctrl1) &~ HD_CTRL1_INVERT_MASK) | rset));
+
   HUNLOCK;
 
   return rval;
@@ -2239,7 +2240,7 @@ hdSetHelicityInversion(int32_t fiber_input, int32_t cu_input, int32_t cu_output)
  * @return OK if successful, otherwise ERROR;
  */
 int32_t
-hdGetHelicityInversion(int32_t *fiber_input, int32_t *cu_input, int32_t *cu_output)
+hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_output)
 {
   int32_t rval = 0;
   uint32_t rreg = 0;
