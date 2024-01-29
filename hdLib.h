@@ -93,6 +93,10 @@ typedef struct hd_struct
 #define HD_CTRL1_USE_INT_HELICITY    (1 << 18)
 #define HD_CTRL1_USE_EXT_CU_IN       (1 << 19)
 #define HD_CTRL1_INT_HELICITY_TO_FP  (1 << 20)
+#define HD_CTRL1_INVERT_FIBER_INPUT  (1 << 21)
+#define HD_CTRL1_INVERT_CU_INPUT     (1 << 22)
+#define HD_CTRL1_INVERT_CU_OUTPUT    (1 << 23)
+#define HD_CTRL1_INVERT_MASK         0x00e00000
 
 /* 0xC ctrl2 bits and masks */
 #define HD_CTRL2_DECODER_ENABLE      (1 << 0)
@@ -186,7 +190,7 @@ typedef struct hd_struct
 #define HD_DATA_BLOCK_TRAILER     0x08000000
 
 /* Supported Firmware Version */
-#define HD_SUPPORTED_FIRMWARE  0x07
+#define HD_SUPPORTED_FIRMWARE  0x08
 
 /* hdInit initialization flags */
 #define HD_INIT_IGNORE_FIRMWARE (1 << 0)
@@ -260,4 +264,6 @@ int32_t hdDisableInternalTestTrigger(int32_t pflag);
 int32_t hdGetClockPLLStatus(int32_t *system, int32_t *local);
 int32_t hdGetSlotNumber(uint32_t *slotnumber);
 
+int32_t hdSetHelicityInversion(int32_t fiber_input, int32_t cu_input, int32_t cu_output);
+int32_t hdGetHelicityInversion(int32_t *fiber_input, int32_t *cu_input, int32_t *cu_output);
 #endif /* __HDLIBH__ */

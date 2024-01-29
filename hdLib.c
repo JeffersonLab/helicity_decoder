@@ -2204,3 +2204,54 @@ hdGetSlotNumber(uint32_t *slotnumber)
 
   return rval;
 }
+
+/**
+ * @brief Invert the helicity signal input and/or output
+ * @param[in] fiber_input Invert Fiber input, if not 0
+ * @param[in] cu_input Invert Copper input, if not 0
+ * @param[in] cu_output Invert Copper output, if not 0
+ * @return OK if successful, otherwise ERROR;
+ */
+int32_t
+hdSetHelicityInversion(int32_t fiber_input, int32_t cu_input, int32_t cu_output)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  fiber_input = fiber_input ? HD_CTRL1_INVERT_FIBER_INPUT : 0;
+  cu_input = cu_input ? HD_CTRL1_INVERT_CU_INPUT : 0;
+  cu_output = cu_output ? HD_CTRL1_INVERT_CU_OUTPUT : 0;
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl1,
+	     ((vmeRead32(&hdp->ctrl1) &~ HD_CTRL1_INVERT_MASK) |
+	      (fiber_input | cu_input | cu_output) ));
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @brief Return the setting for helicity signal input and/or output inversion
+ * @param[out] fiber_input Fiber input inverted, if not 0
+ * @param[out] cu_input Copper input inverted, if not 0
+ * @param[out] cu_output Copper output inverted, if not 0
+ * @return OK if successful, otherwise ERROR;
+ */
+int32_t
+hdGetHelicityInversion(int32_t *fiber_input, int32_t *cu_input, int32_t *cu_output)
+{
+  int32_t rval = 0;
+  uint32_t rreg = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rreg = vmeRead32(&hdp->ctrl1) & HD_CTRL1_INVERT_MASK;
+  HUNLOCK;
+
+  *fiber_input = (rreg & HD_CTRL1_INVERT_FIBER_INPUT) ? 1 : 0;
+  *cu_input = (rreg & HD_CTRL1_INVERT_CU_INPUT) ? 1 : 0;
+  *cu_output = (rreg & HD_CTRL1_INVERT_CU_OUTPUT) ? 1 : 0;
+
+  return rval;
+}
