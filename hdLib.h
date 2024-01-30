@@ -6,6 +6,8 @@
  *
  */
 
+#include <stdint.h>
+
 typedef struct hd_struct
 {
   /* 0x0000 */ volatile uint32_t version;

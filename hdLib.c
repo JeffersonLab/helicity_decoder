@@ -418,12 +418,12 @@ hdStatus(int pflag)
   printf("\n");
   printf("                         Configuration\n\n");
 
-
   printf("  .Signal Sources..    .Helicity Src.  Block    .Processing Delay. \n");
   printf("  Clk   Trig   Sync    Input   Output  Level        Trigger   Data \n");
   printf("  ------------------------------------------------------------------------------\n");
   /*
    *     "  INT    INT    INT    FIBER     INT       1             64    256"
+   *     "                       Inverted  Normal  "
    */
 
   printf("  %s    ",
@@ -461,6 +461,17 @@ hdStatus(int pflag)
 
   printf("%4d",
 	   (rv.delay & HD_DELAY_DATA_MASK) >> 16);
+  printf("\n");
+  printf("                       %s",
+	 ((rv.ctrl1 & (HD_CTRL1_HEL_SRC_MASK | HD_CTRL1_INVERT_FIBER_INPUT)) ==
+	  HD_CTRL1_INVERT_FIBER_INPUT) ? "Inverted" :
+	 ((rv.ctrl1 & (HD_CTRL1_HEL_SRC_MASK | HD_CTRL1_INVERT_CU_INPUT)) ==
+	  (HD_CTRL1_USE_EXT_CU_IN | HD_CTRL1_INVERT_CU_INPUT)) ? "Inverted" :
+	 "Normal  ");
+
+  printf("  %s",
+	 (rv.ctrl1 & HD_CTRL1_INVERT_CU_OUTPUT) ?
+	 "Inverted" : "Normal  ");
   printf("\n");
   printf("\n");
 
