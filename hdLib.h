@@ -71,34 +71,44 @@ typedef struct hd_struct
 #define HD_CSR_HARD_RESET                  (1 << 31)
 
 /* 0x8 ctrl1 bits and masks */
-#define HD_CTRL1_CLK_SRC_MASK        0x00000003
-#define HD_CTRL1_CLK_SRC_P0          (0 << 0)
-#define HD_CTRL1_CLK_SRC_FP          (1 << 0)
-#define HD_CTRL1_CLK_SRC_FP2         (2 << 0)
-#define HD_CTRL1_CLK_SRC_INT         (3 << 0)
-#define HD_CTRL1_INT_CLK_ENABLE      (1 << 2)
-#define HD_CTRL1_TRIG_SRC_MASK       0x00000018
-#define HD_CTRL1_TRIG_SRC_P0         (0 << 3)
-#define HD_CTRL1_TRIG_SRC_FP         (1 << 3)
-#define HD_CTRL1_TRIG_SRC_FP2        (2 << 3)
-#define HD_CTRL1_TRIG_SRC_SOFT       (3 << 3)
-#define HD_CTRL1_SYNC_RESET_SRC_MASK 0x00000060
-#define HD_CTRL1_SYNC_RESET_SRC_P0   (0 << 5)
-#define HD_CTRL1_SYNC_RESET_SRC_FP   (1 << 5)
-#define HD_CTRL1_SYNC_RESET_SRC_FP2  (2 << 5)
-#define HD_CTRL1_SYNC_RESET_SRC_SOFT (3 << 5)
-#define HD_CTRL1_SOFT_CONTROL_ENABLE (1 << 7)
-#define HD_CTRL1_INT_TESTTRIG_ENABLE (1 << 8)
-#define HD_CTRL1_INT_ENABLE          (1 << 16)
-#define HD_CTRL1_BERR_ENABLE         (1 << 17)
-#define HD_CTRL1_HEL_SRC_MASK        0x001c0000
-#define HD_CTRL1_USE_INT_HELICITY    (1 << 18)
-#define HD_CTRL1_USE_EXT_CU_IN       (1 << 19)
-#define HD_CTRL1_INT_HELICITY_TO_FP  (1 << 20)
-#define HD_CTRL1_INVERT_FIBER_INPUT  (1 << 21)
-#define HD_CTRL1_INVERT_CU_INPUT     (1 << 22)
-#define HD_CTRL1_INVERT_CU_OUTPUT    (1 << 23)
-#define HD_CTRL1_INVERT_MASK         0x00e00000
+#define HD_CTRL1_CLK_SRC_MASK            0x00000003
+#define HD_CTRL1_CLK_SRC_P0              (0 << 0)
+#define HD_CTRL1_CLK_SRC_FP              (1 << 0)
+#define HD_CTRL1_CLK_SRC_FP2             (2 << 0)
+#define HD_CTRL1_CLK_SRC_INT             (3 << 0)
+#define HD_CTRL1_INT_CLK_ENABLE          (1 << 2)
+#define HD_CTRL1_TRIG_SRC_MASK           0x00000018
+#define HD_CTRL1_TRIG_SRC_P0             (0 << 3)
+#define HD_CTRL1_TRIG_SRC_FP             (1 << 3)
+#define HD_CTRL1_TRIG_SRC_FP2            (2 << 3)
+#define HD_CTRL1_TRIG_SRC_SOFT           (3 << 3)
+#define HD_CTRL1_SYNC_RESET_SRC_MASK     0x00000060
+#define HD_CTRL1_SYNC_RESET_SRC_P0       (0 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_FP       (1 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_FP2      (2 << 5)
+#define HD_CTRL1_SYNC_RESET_SRC_SOFT     (3 << 5)
+#define HD_CTRL1_SOFT_CONTROL_ENABLE     (1 << 7)
+#define HD_CTRL1_INT_TESTTRIG_ENABLE     (1 << 8)
+#define HD_CTRL1_DEBUG_BUSY_OUT_ENABLE   (1 << 12)
+#define HD_CTRL1_TSETTLE_FILTER_MASK     0x0000e000
+#define HD_CTRL1_TSETTLE_FILTER_DISABLED (0 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_4        (1 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_8        (2 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_16       (3 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_24       (4 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_32       (5 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_64       (6 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_128      (7 << 13)
+#define HD_CTRL1_INT_ENABLE              (1 << 16)
+#define HD_CTRL1_BERR_ENABLE             (1 << 17)
+#define HD_CTRL1_HEL_SRC_MASK            0x001c0000
+#define HD_CTRL1_USE_INT_HELICITY        (1 << 18)
+#define HD_CTRL1_USE_EXT_CU_IN           (1 << 19)
+#define HD_CTRL1_INT_HELICITY_TO_FP      (1 << 20)
+#define HD_CTRL1_INVERT_FIBER_INPUT      (1 << 21)
+#define HD_CTRL1_INVERT_CU_INPUT         (1 << 22)
+#define HD_CTRL1_INVERT_CU_OUTPUT        (1 << 23)
+#define HD_CTRL1_INVERT_MASK             0x00e00000
 
 /* 0xC ctrl2 bits and masks */
 #define HD_CTRL2_DECODER_ENABLE      (1 << 0)
@@ -192,7 +202,7 @@ typedef struct hd_struct
 #define HD_DATA_BLOCK_TRAILER     0x08000000
 
 /* Supported Firmware Version */
-#define HD_SUPPORTED_FIRMWARE  0x08
+#define HD_SUPPORTED_FIRMWARE  0x09
 
 /* hdInit initialization flags */
 #define HD_INIT_IGNORE_FIRMWARE (1 << 0)
@@ -268,4 +278,7 @@ int32_t hdGetSlotNumber(uint32_t *slotnumber);
 
 int32_t hdSetHelicityInversion(uint8_t fiber_input, uint8_t cu_input, uint8_t cu_output);
 int32_t hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_output);
+
+int32_t hdSetTSettleFilter(uint8_t clock);
+int32_t hdGetTSettleFilter(uint8_t *clock);
 #endif /* __HDLIBH__ */

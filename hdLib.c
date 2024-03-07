@@ -510,11 +510,11 @@ hdStatus(int pflag)
   printf("\n");
   printf("                         Status\n");
   printf("                                                               Int Buff\n");
-  printf("  Helicity   ...Block Data..       Event             Latch     ..Empty.\n");
-  printf("  Sequence   Accepted  Ready      Buffer  BERR  BUSY  BUSY      0     1\n");
+  printf("  Helicity   ...Block Data..       Event             Latch     ..Empty.  TSETTLE\n");
+  printf("  Sequence   Accepted  Ready      Buffer  BERR  BUSY  BUSY      0     1  Filter\n");
   printf("  ------------------------------------------------------------------------------\n");
   /*
-   *     "        OK        ---    ---       Empty    lo    lo    lo    YES    YES"
+   *     "        OK        ---    ---       Empty    lo    lo    lo    YES    YES   128"
    */
 
   printf("     %s        ",
@@ -541,8 +541,18 @@ hdStatus(int pflag)
   printf("%s    ",
 	 rv.csr & HD_CSR_INTERNAL_BUF0 ? "YES" : "---");
 
-  printf("%s",
+  printf("%s  ",
 	 rv.csr & HD_CSR_INTERNAL_BUF1 ? "YES" : "---");
+  printf("%d",
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_DISABLED ? 0 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_4 ? 4 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_8 ? 8 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_16 ? 16 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_24 ? 24 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_32 ? 32 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_64 ? 64 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_128 ? 128 :
+	 -1);
   printf("\n");
   printf("\n");
 
@@ -2266,4 +2276,68 @@ hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_outp
   *cu_output = (rreg & HD_CTRL1_INVERT_CU_OUTPUT) ? 1 : 0;
 
   return rval;
+}
+
+/**
+ * @brief Set the clock period for TSettle Filtering
+ * @param[in] clock  clock period
+ *     0   Disabled
+ *     1   4 clock cycles
+ *     2   8 clock cycles
+ *     3   16 clock cycles
+ *     4   24 clock cycles
+ *     5   32 clock cycles
+ *     6   64 clock cycles
+ *     7   128 clock cycles
+ * @return OK if successful, otherwise ERROR;
+ */
+int32_t
+hdSetTSettleFilter(uint8_t clock)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  if(clock > 7)
+    {
+      printf("%s: ERROR: Invalid clock %d (0x%x).  MAX = %d (0x%x)\n",
+	     __func__, clock, clock,
+	     HD_CTRL1_TSETTLE_FILTER_128, HD_CTRL1_TSETTLE_FILTER_128);
+      return ERROR;
+    }
+
+  HLOCK;
+  vmeWrite32(&hdp->ctrl1,
+	     ((vmeRead32(&hdp->ctrl1) &~ HD_CTRL1_TSETTLE_FILTER_MASK) | clock));
+
+  HUNLOCK;
+
+  return rval;
+
+}
+
+/**
+ * @brief Get the clock period for TSettle Filtering
+ * @param[out] clock Description
+ *     0   Disabled
+ *     1   4 clock cycles
+ *     2   8 clock cycles
+ *     3   16 clock cycles
+ *     4   24 clock cycles
+ *     5   32 clock cycles
+ *     6   64 clock cycles
+ *     7   128 clock cycles
+ * @return OK if successful, otherwise ERROR;
+ */
+int32_t
+hdGetTSettleFilter(uint8_t *clock)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  *clock = (vmeRead32(&hdp->ctrl1) & HD_CTRL1_TSETTLE_FILTER_MASK) >> 13;
+  HUNLOCK;
+
+  return rval;
+
 }
