@@ -1,0 +1,23 @@
+############################################################
+#
+# hd_init.service
+#
+#    - Systemd Unit file for the initialization of
+#      the CEBAF 5MeV MOTT DAQ Helicity Decoder
+#
+
+
+[Unit]
+Description=Helicity Decoder Init
+Wants=autofs.service ypbind.service
+After=autofs.service ypbind.service
+
+
+[Service]
+User=idaq
+Type=oneshot
+ExecStart=/usr/local/systemd/hd_init.sh
+ExecStop=/bin/pkill -f -TERM hd_init.sh
+
+[Install]
+WantedBy=multi-user.target
