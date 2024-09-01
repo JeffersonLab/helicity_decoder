@@ -53,6 +53,10 @@ hdTestVXS: hdTestVXS.c
 	@echo " CC     $@"
 	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
 
+hdReadoutTest: hdReadoutTest.c
+	@echo " CC     $@"
+	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lgsl -lgslTimer $(INCS) -o $@ $<
+
 %.d: %.c
 	@echo " DEP    $@"
 	@set -e; rm -f $@; \

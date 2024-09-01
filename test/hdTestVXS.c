@@ -23,6 +23,16 @@
 //  Just check status of PLL for system and local clock
 //
 
+typedef struct {
+  int clock;
+  int syncreset;
+  int busy;
+  int trig1;
+  int trig2;
+} results_t;
+
+results_t result = {ERROR,ERROR,ERROR,ERROR,ERROR};
+
 int32_t
 testClock()
 {
@@ -31,6 +41,9 @@ testClock()
 
   int32_t system = 0, local = 0;
   rval = hdGetClockPLLStatus(&system, &local);
+
+  if((system == 1) && (local == 1))
+    result.clock = OK;
 
   printf("%s:\n\t system = %d (%s)\n\t local = %d (%s)\n",
 	 __func__,
@@ -92,6 +105,9 @@ testSyncReset(char *char_nsync)
 	 (diff == nsync) ? "=" : "!=",
 	 diff);
 
+  if(diff == nsync)
+    result.syncreset = OK;
+
 
   return rval;
 }
@@ -105,11 +121,15 @@ testBusyOut()
 {
   int32_t rval = OK;
   uint8_t status = 0, ti_status = 0;
+  int test1 = ERROR, test2 = ERROR;
   printf("%s: ----------------------------------------------------------------------\n", __func__);
 
   hdBusy(0);
   hdBusyStatus(&status);
   ti_status = tiGetSWBBusy(0);
+
+  if(ti_status == 0)
+    test1 = OK;
 
   printf("%s:\n\t Busy off     HD status = %d     ti_status = %d\n",
 	 __func__,
@@ -118,11 +138,18 @@ testBusyOut()
   hdBusy(1);
   hdBusyStatus(&status);
   ti_status = tiGetSWBBusy(0);
+
+  if(ti_status == 1)
+    test2 = OK;
+
   printf("%s:\n\t Busy ON      HD status = %d     ti_status = %d\n",
 	 __func__,
 	 status, ti_status);
 
   hdBusy(0);
+
+  if((test1 == OK) && (test2 == OK))
+    result.busy = OK;
 
   return rval;
 }
@@ -190,6 +217,9 @@ testTrigger1(char *char_ntrig)
 	 (diff == ntrig) ? "=" : "!=",
 	 diff);
 
+  if(diff == ntrig)
+    result.trig1 = OK;
+
   return rval;
 }
 
@@ -256,6 +286,9 @@ testTrigger2(char *char_ntrig)
 	 (diff == ntrig) ? "=" : "!=",
 	 diff);
 
+  if(diff == ntrig)
+    result.trig2 = OK;
+
   return rval;
 }
 
@@ -310,6 +343,21 @@ reset(char *choice)
   return 0;
 }
 
+int32_t
+showresult(char *choice)
+{
+  printf("\n\n");
+  printf(" ***** VXS TEST RESULTS ***** \n");
+  printf("  CLOCK LOCK : %s\n", result.clock==OK ? "PASS" : "FAIL");
+  printf("  BUSY       : %s\n", result.busy==OK ? "PASS" : "FAIL");
+  printf("  SYNCRESET  : %s\n", result.syncreset==OK ? "PASS" : "FAIL");
+  printf("  TRIG1      : %s\n", result.trig1==OK ? "PASS" : "FAIL");
+  printf("  TRIG2      : %s\n", result.trig2==OK ? "PASS" : "FAIL");
+  printf(" **************************** \n");
+  printf("\n\n");
+  return 0;
+}
+
 #include <readline/readline.h>
 int com_quit(char *arg);
 int com_help(char *arg);
@@ -333,6 +381,7 @@ COMMAND commands[] = {
   {"enable", enable, "Enable HD"},
   {"disable", disable, "Disable HD"},
   {"reset", reset, "Reset HD"},
+  {"showresult", showresult, "Show Test Results"},
   {"quit", com_quit, "Quit"},
   {(char *) NULL, (rl_icpfunc_t *) NULL, (char *) NULL}
 };
@@ -380,7 +429,7 @@ main(int argc, char *argv[])
   tiSyncReset(1);
 
   // sd init
-  stat = sdInit(0);
+  stat = sdInit(SD_INIT_IGNORE_VERSION);
 
   // helicity decoder init + config
   hdInit(address, HD_INIT_VXS, HD_INIT_EXTERNAL_FIBER, 0);

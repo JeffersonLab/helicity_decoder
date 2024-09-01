@@ -17,6 +17,7 @@
 #include "jvme.h"
 #include "dmaPList.h"
 #include "hdLib.h"
+#include "gslTimerLib.h"
 
 int
 main(int argc, char *argv[])
@@ -41,6 +42,18 @@ main(int argc, char *argv[])
 
   printf("\n %s: address = 0x%08x\n", argv[0], address);
   printf("----------------------------\n");
+
+  /* Create the gslTimer object */
+  gslTimer_t gt;
+
+  uint32_t ntimers = 10;
+  uint32_t min_time = 0;
+  uint32_t max_time = 100000;
+  uint32_t bin_size = 10;
+
+  /* Initialize gslTimer */
+  gslTimerInit(ntimers, min_time, max_time, bin_size, &gt);
+
 
   stat = vmeOpenDefaultWindows();
   if(stat != OK)
@@ -71,54 +84,72 @@ main(int argc, char *argv[])
   hdEnable();
   hdSync(1);
   sleep(1);
-  hdTrig(1);
 
-  hdStatus(1);
-  int timeout=0;
-  while((hdBReady(0)!=1) && (timeout<100))
+  int ireadout = 0, nreads = 1000;
+  for(ireadout = 0; ireadout < nreads; ireadout++)
     {
-      timeout++;
+      gslTimerStartTime(&gt);     // Start Time
+      hdTrig(0);
+
+      int timeout=0;
+      gslTimerRecordTime(&gt);
+      while((hdBReady(0)!=1) && (timeout<100))
+	{
+	  timeout++;
+	}
+      gslTimerRecordTime(&gt);
+
+      if(timeout>=100)
+	{
+	  printf("TIMEOUT!\n");
+	  goto CLOSE;
+	}
+
+      GETEVENT(vmeIN,1);
+
+      vmeDmaConfig(2,5,1);
+      gslTimerRecordTime(&gt);
+      dCnt = hdReadBlock(dma_dabufp, 1024>>2,1);
+      gslTimerRecordTime(&gt);
+      if(dCnt<=0)
+	{
+	  printf("No data or error.  dCnt = %d\n",dCnt);
+	}
+      else
+	{
+	  dma_dabufp += dCnt;
+	}
+
+      PUTEVENT(vmeOUT);
+      gslTimerEndTime(&gt);
+
+      outEvent = dmaPGetItem(vmeOUT);
+
+      dCnt = outEvent->length;
+
+      if(ireadout == 0)
+	{
+	  printf("  dCnt = %d\n",dCnt);
+	  for(idata=0;idata<dCnt;idata++)
+	    {
+	      hdDecodeData(LSWAP(outEvent->data[idata]));
+	      /* if((idata%5)==0) printf("\n\t"); */
+	      /* printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata])); */
+	    }
+	  printf("\n\n");
+	}
+
+      dmaPFreeItem(outEvent);
     }
-
-  if(timeout>=100)
-    {
-      printf("TIMEOUT!\n");
-      goto CLOSE;
-    }
-
-  GETEVENT(vmeIN,1);
-
-  vmeDmaConfig(2,5,1);
-  dCnt = hdReadBlock(dma_dabufp, 1024>>2,1);
-  if(dCnt<=0)
-    {
-      printf("No data or error.  dCnt = %d\n",dCnt);
-    }
-  else
-    {
-      dma_dabufp += dCnt;
-    }
-
-  PUTEVENT(vmeOUT);
-
-  outEvent = dmaPGetItem(vmeOUT);
-
-  dCnt = outEvent->length;
-
-  printf("  dCnt = %d\n",dCnt);
-  for(idata=0;idata<dCnt;idata++)
-    {
-      hdDecodeData(LSWAP(outEvent->data[idata]));
-      /* if((idata%5)==0) printf("\n\t"); */
-      /* printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata])); */
-    }
-  printf("\n\n");
-
-  dmaPFreeItem(outEvent);
 
   hdDisable();
 
   hdStatus(1);
+  hdReset(2, 1);
+  gslTimerPrintStats(&gt);
+
+  /* Free all memory allocated by the library */
+  gslTimerFree(&gt);
 
  CLOSE:
 
