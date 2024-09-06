@@ -37,29 +37,37 @@ ifeq ($(DEBUG),1)
 endif
 
 SRC			= $(wildcard *.c)
-DEPS			= $(SRC:.c=.d)
 PROGS			= $(SRC:.c=)
+
+DEPDIR 			:= .deps
+DEPFLAGS 		= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+DEPFILES 		:= $(SRC:%.c=$(DEPDIR)/%.d)
 
 all: $(PROGS)
 
 clean distclean:
-	@rm -f $(PROGS) *~ $(OBJS) $(DEPS)
+	@rm -f $(PROGS) *~ $(DEPFILES)
 
 %: %.c
+%: %.c $(DEPDIR)/%.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS) $(INCS) -o $@ $<
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
 hdTestVXS: hdTestVXS.c
+hdTestVXS: hdTestVXS.c $(DEPDIR)/hdTestVXS.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -lti -lsd -lts -lstdc++ -lreadline -o $@ $<
 
-%.d: %.c
-	@echo " DEP    $@"
-	@set -e; rm -f $@; \
-	$(CC) -MM -shared $(INCS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+hdTestFP: hdTestFP.c
+hdTestFP: hdTestFP.c $(DEPDIR)/hdTestFP.d | $(DEPDIR)
+	@echo " CC     $@"
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -lti -lfadc -lstdc++ -lreadline -o $@ $<
 
--include $(DEPS)
+
+$(DEPDIR): ; @mkdir -p $@
+
+$(DEPFILES):
+include $(wildcard $(DEPFILES))
+
 
 .PHONY: all clean distclean

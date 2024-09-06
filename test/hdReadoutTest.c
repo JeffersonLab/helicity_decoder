@@ -120,6 +120,7 @@ main(int argc, char *argv[])
 
   hdStatus(1);
 
+  hdReset(0,1);
  CLOSE:
 
   vmeBusUnlock();

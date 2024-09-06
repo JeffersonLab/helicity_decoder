@@ -44,7 +44,7 @@ main(int argc, char *argv[])
 {
 
   int stat = 0, rval = 0;
-  uint32_t address=0x00ed0000;
+  uint32_t address=0x00a80000;
   int hd_trigger_src = HD_INIT_FP;
   int hd_helicity_src = HD_INIT_EXTERNAL_FIBER;
   int hd_init_flag = 0;
