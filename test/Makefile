@@ -40,18 +40,13 @@ SRC			= $(wildcard *.c)
 PROGS			= $(SRC:.c=)
 
 DEPDIR 			:= .deps
-DEPFLAGS 		= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+DEPFLAGS 		= -MT $@ -MMD -MP -MF $(DEPDIR)/$@.d
 DEPFILES 		:= $(SRC:%.c=$(DEPDIR)/%.d)
 
 all: $(PROGS)
 
 clean distclean:
 	@rm -f $(PROGS) *~ $(DEPFILES)
-
-%: %.c
-%: %.c $(DEPDIR)/%.d | $(DEPDIR)
-	@echo " CC     $@"
-	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
 hdTestVXS: hdTestVXS.c
 hdTestVXS: hdTestVXS.c $(DEPDIR)/hdTestVXS.d | $(DEPDIR)
@@ -62,6 +57,11 @@ hdTestFP: hdTestFP.c
 hdTestFP: hdTestFP.c $(DEPDIR)/hdTestFP.d | $(DEPDIR)
 	@echo " CC     $@"
 	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -lti -lfadc -lstdc++ -lreadline -o $@ $<
+
+%: %.c
+%: %.c $(DEPDIR)/%.d | $(DEPDIR)
+	@echo " CC     $@"
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
 
 $(DEPDIR): ; @mkdir -p $@
