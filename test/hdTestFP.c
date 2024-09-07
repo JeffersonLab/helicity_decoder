@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "jvme.h"
+#include "tiLib.h"
 #include "hdLib.h"
 #include "fadcLib.h"
 
@@ -149,6 +150,7 @@ testTrigger1(char *char_ntrig)
 
 
   faSDC_Sync();
+  tiSyncReset(1);
 
   hdEnable(0);
   if(hdReadScalers(scalers, 1))
@@ -161,15 +163,13 @@ testTrigger1(char *char_ntrig)
 #endif
     }
 
-  int32_t wait_time = 50;
-  int itrig=0;
-  for(itrig = 0; itrig < ntrig; itrig++)
-    {
+  int32_t wait_time = 50 * ntrig;
+  tiResetBlockReadout();
+  tiEnableTriggerSource();
 
-      faSDC_Trig();
-      usleep(wait_time);
-    }
-
+  tiSoftTrig(1, ntrig, 1000, 0);
+  usleep(wait_time);
+  tiDisableTriggerSource(0);
   hdDisable(0);
 
   if(hdReadScalers(scalers, 1))
@@ -197,11 +197,14 @@ testTrigger1(char *char_ntrig)
 int32_t
 status(char *choice)
 {
-  if((strlen(choice) == 0) | (strcasecmp(choice, "sdc") == 0))
-    faSDC_Status(1);
+  if((strlen(choice) == 0) | (strcasecmp(choice, "ti") == 0))
+    tiStatus(1);
 
   if((strlen(choice) == 0) | (strcasecmp(choice, "hd") == 0))
     hdStatus(1);
+
+  if((strlen(choice) == 0) | (strcasecmp(choice, "sdc") == 0))
+    faSDC_Status(1);
 
   return 0;
 }
@@ -295,11 +298,24 @@ main(int argc, char *argv[])
   vmeCheckMutexHealth(1);
   vmeBusLock();
 
+  // TI init + config
+  stat = tiInit(0,0,TI_INIT_SKIP_FIRMWARE_CHECK);
+  tiBusyOnBufferLevel(0);
+  tiSetBlockBufferLevel(0);
+  tiSetTriggerSource(5);
+  tiDisableDataReadout();
+
+  // resets required before syncs and trigs
+  tiClockReset();
+  taskDelay(1);
+  tiTrigLinkReset();
+  taskDelay(1);
+  tiSyncReset(1);
 
   // sd init
   extern struct fadc_sdc_struct *FASDCp;
   extern u_long fadcA16Offset;
-  uint32_t a16addr = 0xea00;
+  uint32_t a16addr = 0xeb00;
   u_long laddr = 0;
   int res = vmeBusToLocalAdrs(0x29,(char *)(unsigned long)a16addr,(char **)&laddr);
   if (res != 0)
@@ -310,7 +326,7 @@ main(int argc, char *argv[])
     }
   fadcA16Offset = laddr-a16addr;
   FASDCp = (struct fadc_sdc_struct *) laddr;
-  faSDC_Config(0, 0x2);
+  faSDC_Config(1, 0x2);
 
   faSDC_Status(1);
 
