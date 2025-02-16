@@ -1,5 +1,4 @@
-#ifndef __HDLIBH__
-#define __HDLIBH__
+#pragma once
 /******************************************************************************
  *
  *  hdLib.h -  Header for Driver library for JLab helicity decoder
@@ -103,10 +102,10 @@ typedef struct hd_struct
 #define HD_CTRL1_TSETTLE_FILTER_4        (1 << 13)
 #define HD_CTRL1_TSETTLE_FILTER_8        (2 << 13)
 #define HD_CTRL1_TSETTLE_FILTER_16       (3 << 13)
-#define HD_CTRL1_TSETTLE_FILTER_24       (4 << 13)
-#define HD_CTRL1_TSETTLE_FILTER_32       (5 << 13)
-#define HD_CTRL1_TSETTLE_FILTER_64       (6 << 13)
-#define HD_CTRL1_TSETTLE_FILTER_128      (7 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_32       (4 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_64       (5 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_128      (6 << 13)
+#define HD_CTRL1_TSETTLE_FILTER_256      (7 << 13)
 #define HD_CTRL1_INT_ENABLE              (1 << 16)
 #define HD_CTRL1_BERR_ENABLE             (1 << 17)
 #define HD_CTRL1_HEL_SRC_MASK            0x001c0000
@@ -116,6 +115,7 @@ typedef struct hd_struct
 #define HD_CTRL1_INVERT_FIBER_INPUT      (1 << 21)
 #define HD_CTRL1_INVERT_CU_INPUT         (1 << 22)
 #define HD_CTRL1_INVERT_CU_OUTPUT        (1 << 23)
+#define HD_CTRL1_PROCESSED_TO_FP         (1 << 24)
 #define HD_CTRL1_INVERT_MASK             0x00e00000
 
 /* 0xC ctrl2 bits and masks */
@@ -191,16 +191,23 @@ typedef struct hd_struct
 #define HD_CONFIRM_READ_ADDR_MASK   0x00000FFF
 #define HD_CONFIRM_WRITE_ADDR_MASK  0x0FFF0000
 
-/* 0x78 firmware_csr bits and masks */
-#define HD_FIRMWARE_CSR_LAST_VALID_READ_MASK 0x000000FF
-#define HD_FIRMWARE_CSR_BUSY                 (1 << 8)
-#define HD_FIRMWARE_CSR_SECTOR_ERASE         (1 << 29)
-#define HD_FIRMWARE_CSR_BULK_ERASE           (1 << 30)
-#define HD_FIRMWARE_CSR_WRITE_ENABLE         (1 << 31)
+/* 0x80 delay_setup bits and masks */
+#define HD_DELAY_SETUP_SELECTION_MASK 0x0000000F
+#define HD_DELAY_SETUP_ENABLE          (1 << 31)
 
-/* 0x80 firmware_data bits and masks */
-#define HD_FIRMWARE_DATA_WRITE_MASK   0x000000FF
-#define HD_FIRMWARE_DATA_ADDRESS_MASK 0xFFFFFF00
+
+/* 0x90 config_csr bits and masks */
+#define HD_CONFIG_CSR_LAST_VALID_READ_MASK 0x000000FF
+#define HD_CONFIG_CSR_BUSY                 (1 << 8)
+#define HD_CONFIG_CSR_SECTOR_ERASE         (1 << 29)
+#define HD_CONFIG_CSR_BULK_ERASE           (1 << 30)
+#define HD_CONFIG_CSR_WRITE_ENABLE         (1 << 31)
+
+/* 0x94 firmware_data bits and masks */
+#define HD_CONFIG_DATA_WRITE_MASK   0x000000FF
+#define HD_CONFIG_DATA_ADDRESS_MASK 0xFFFFFF00
+
+
 
 /* Data Format words and masks */
 #define HD_DUMMY_WORD             0xF8000000
@@ -290,4 +297,7 @@ int32_t hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t 
 
 int32_t hdSetTSettleFilter(uint8_t clock);
 int32_t hdGetTSettleFilter(uint8_t *clock);
-#endif /* __HDLIBH__ */
+int32_t hdSetProcessedOutput(int8_t enable);
+int32_t hdGetProcessedOutput();
+int32_t hdDelayTestSetup(uint8_t pair_delay_selection, int8_t enable);
+int32_t hdGetDelayTestSetup(uint8_t *pair_delay_selection, int8_t *enable);
