@@ -42,7 +42,7 @@ typedef struct hd_struct
   /* 0x0078          */ uint32_t spare[(0x80-0x78)>>2];
 
   /* 0x0080 */ volatile uint32_t delay_setup;
-  /* 0x0084 */ volatile uint32_t delay_count;
+  /* 0x0084 */ volatile uint32_t delay_error_count;
 
   /* 0x0088          */ uint32_t spare2[(0x90-0x88)>>2];
   /* 0x0090 */ volatile uint32_t config_csr;
@@ -195,6 +195,8 @@ typedef struct hd_struct
 #define HD_DELAY_SETUP_SELECTION_MASK 0x0000000F
 #define HD_DELAY_SETUP_ENABLE          (1 << 31)
 
+/* 0x84 delay_error_count bits and masks */
+#define HD_DELAY_ERROR_RESET           (1 << 31)
 
 /* 0x90 config_csr bits and masks */
 #define HD_CONFIG_CSR_LAST_VALID_READ_MASK 0x000000FF
@@ -301,3 +303,5 @@ int32_t hdSetProcessedOutput(int8_t enable);
 int32_t hdGetProcessedOutput();
 int32_t hdDelayTestSetup(uint8_t pair_delay_selection, int8_t enable);
 int32_t hdGetDelayTestSetup(uint8_t *pair_delay_selection, int8_t *enable);
+uint32_t hdGetDelayTestErrorCount();
+int32_t hdDelayTestErrorCountReset();

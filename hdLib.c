@@ -2247,6 +2247,7 @@ hdGetSlotNumber(uint32_t *slotnumber)
 }
 
 /**
+ * @ingroup Config
  * @brief Invert the helicity signal input and/or output
  * @param[in] fiber_input Invert Fiber input, if not 0
  * @param[in] cu_input Invert Copper input, if not 0
@@ -2274,6 +2275,7 @@ hdSetHelicityInversion(uint8_t fiber_input, uint8_t cu_input, uint8_t cu_output)
 }
 
 /**
+ * @ingroup Status
  * @brief Return the setting for helicity signal input and/or output inversion
  * @param[out] fiber_input Fiber input inverted, if not 0
  * @param[out] cu_input Copper input inverted, if not 0
@@ -2299,6 +2301,7 @@ hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_outp
 }
 
 /**
+ * @ingroup Config
  * @brief Set the clock period for TSettle Filtering
  * @param[in] clock  clock period
  *     0   Disabled
@@ -2336,6 +2339,7 @@ hdSetTSettleFilter(uint8_t clock)
 }
 
 /**
+ * @ingroup Status
  * @brief Get the clock period for TSettle Filtering
  * @param[out] clock Description
  *     0   Disabled
@@ -2363,6 +2367,7 @@ hdGetTSettleFilter(uint8_t *clock)
 }
 
 /**
+ * @ingroup Config
  * @brief Enable processed signals to helicity front panel outputs
  * @param[in] enable
  *      0   Disable
@@ -2388,6 +2393,7 @@ hdSetProcessedOutput(int8_t enable)
 }
 
 /**
+ * @ingroup Status
  * @brief Return state of processed signals to helicity front panel outputs
  * @return 0 if disabled, 1 if enabled, otherwise ERROR
  */
@@ -2405,6 +2411,7 @@ hdGetProcessedOutput()
 }
 
 /**
+ * @ingroup Config
  * @brief Configure test of helicity reporting delay of the helicity generator
  * @param[in] pair_delay_selection
  *     0   no delay
@@ -2452,6 +2459,7 @@ hdDelayTestSetup(uint8_t pair_delay_selection, int8_t enable)
 }
 
 /**
+ * @ingroup Status
  * @brief Summary
  * @param[out] pair_delay_selection Description
  *     0   no delay
@@ -2486,6 +2494,42 @@ hdGetDelayTestSetup(uint8_t *pair_delay_selection, int8_t *enable)
   delay_setup = vmeRead32(&hdp->delay_setup);
   *pair_delay_selection = delay_setup & HD_DELAY_SETUP_SELECTION_MASK;
   *enable = (delay_setup & HD_DELAY_SETUP_ENABLE) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Return Error Count from Helicity Delay Test
+ * @return Error count, if successful
+ */
+uint32_t
+hdGetDelayTestErrorCount()
+{
+  uint32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = vmeRead32(&hdp->delay_error_count);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Reset the error count from the helicity delay test
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDelayTestErrorCountReset()
+{
+  uint32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->delay_error_count, HD_DELAY_ERROR_RESET);
   HUNLOCK;
 
   return rval;
