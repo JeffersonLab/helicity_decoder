@@ -5,6 +5,7 @@ project(helicity_decoder)
 add_library(hd
   SHARED
   hdLib.c
+  hdFirmwareTools.c
 )
 
 add_compile_options(-Wall -Wno-unused -g)

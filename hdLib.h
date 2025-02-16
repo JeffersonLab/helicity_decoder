@@ -40,7 +40,15 @@ typedef struct hd_struct
   /* 0x0070 */ volatile uint32_t helicity_history3;
   /* 0x0074 */ volatile uint32_t helicity_history4;
 
-  /* 0x0078 */ volatile uint32_t spare;
+  /* 0x0078          */ uint32_t spare[(0x80-0x78)>>2];
+
+  /* 0x0080 */ volatile uint32_t delay_setup;
+  /* 0x0084 */ volatile uint32_t delay_count;
+
+  /* 0x0088          */ uint32_t spare2[(0x90-0x88)>>2];
+  /* 0x0090 */ volatile uint32_t config_csr;
+  /* 0x0094 */ volatile uint32_t config_data;
+
 } HD;
 
 /* 0x0 version bits and masks */
@@ -220,6 +228,7 @@ int32_t hdCheckAddresses();
 int32_t hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag);
 uint32_t hdFind();
 int32_t hdStatus(int pflag);
+int32_t hdGetFirmwareVersion();
 int32_t hdReset(uint8_t type, uint8_t clearA32);
 int32_t hdSetA32(uint32_t a32base);
 uint32_t hdGetA32();

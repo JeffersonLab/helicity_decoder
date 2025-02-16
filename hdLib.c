@@ -34,7 +34,7 @@
 typedef unsigned long devaddr_t;
 #endif
 
-static volatile HD *hdp=NULL;	  /* pointer to HD memory map */
+volatile HD *hdp=NULL;	  /* pointer to HD memory map */
 static volatile uint32_t *hdDatap=NULL; /* pointer to HD data memory map */
 static devaddr_t hdA24Offset = 0; /* Offset between VME A24 and Local address space */
 static devaddr_t hdA32Offset = 0x09000000; /* Offset between VME A32 and Local address space */
@@ -568,6 +568,26 @@ hdStatus(int pflag)
 
   return OK;
 }
+
+/**
+ * @ingroup Status
+ * @brief Return the firmware version of the module
+ *
+ * @return Firmware version if successful, otherwise ERROR
+ */
+int32_t
+hdGetFirmwareVersion()
+{
+  int32_t rval;
+  CHECKINIT;
+
+  HLOCK;
+  rval = vmeRead32(&hdp->version) & HD_VERSION_FIRMWARE_MASK;
+  HUNLOCK;
+
+  return rval;
+}
+
 
 /**
  * @ingroup Config
