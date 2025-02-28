@@ -202,7 +202,7 @@ typedef struct hd_struct
 #define HD_DATA_BLOCK_TRAILER     0x08000000
 
 /* Supported Firmware Version */
-#define HD_SUPPORTED_FIRMWARE  0x09
+#define HD_SUPPORTED_FIRMWARE  0x11
 
 /* hdInit initialization flags */
 #define HD_INIT_IGNORE_FIRMWARE (1 << 0)
