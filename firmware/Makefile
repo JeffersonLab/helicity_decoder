@@ -41,9 +41,11 @@ ifeq ($(DEBUG),1)
 endif
 
 SRC			= $(wildcard *.c)
-DEPS			= $(SRC:.c=.d)
 OBJ			= $(SRC:.c=.o)
 PROGS			= $(SRC:.c=)
+DEPDIR 			:= .deps
+DEPFLAGS 		= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+DEPFILES 		:= $(SRC:%.c=$(DEPDIR)/%.d)
 
 all: echoarch $(PROGS)
 
@@ -51,21 +53,19 @@ clean distclean:
 	@rm -f $(PROGS) *~ $(OBJS) $(DEPS)
 
 %: %.c
+%: %.c $(DEPDIR)/%.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS) $(INCS) -o $@ $<
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
-%.d: %.c
-	@echo " DEP    $@"
-	@set -e; rm -f $@; \
-	$(CC) -MM -shared $(INCS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1 $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
 
 install: $(PROGS)
 	@echo " CP     ${PROGS}"
 	${Q}cp ${PWD}/$(PROGS) $(LINUXVME_BIN)/
 
--include $(DEPS)
+$(DEPDIR): ; @mkdir -p $@
+
+$(DEPFILES):
+include $(wildcard $(DEPFILES))
 
 .PHONY: all clean distclean
 
