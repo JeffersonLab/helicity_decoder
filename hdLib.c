@@ -34,7 +34,7 @@
 typedef unsigned long devaddr_t;
 #endif
 
-static volatile HD *hdp=NULL;	  /* pointer to HD memory map */
+volatile HD *hdp=NULL;	  /* pointer to HD memory map */
 static volatile uint32_t *hdDatap=NULL; /* pointer to HD data memory map */
 static devaddr_t hdA24Offset = 0; /* Offset between VME A24 and Local address space */
 static devaddr_t hdA32Offset = 0x09000000; /* Offset between VME A32 and Local address space */
@@ -167,10 +167,8 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
       vAddr = vAddr << 19;
     }
 
-  if(iFlag&HD_INIT_NO_INIT)
-    {
-      noBoardInit = 1;
-    }
+  noBoardInit = (iFlag & HD_INIT_NO_INIT) ? 1 : 0;
+  noFirmwareCheck = (iFlag & HD_INIT_IGNORE_FIRMWARE) ? 1 : 0;
 
   stat = vmeBusToLocalAdrs(0x39, (char *)(uintptr_t)vAddr, (char **) &laddr);
   if (stat != 0)
@@ -548,10 +546,10 @@ hdStatus(int pflag)
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_4 ? 4 :
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_8 ? 8 :
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_16 ? 16 :
-	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_24 ? 24 :
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_32 ? 32 :
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_64 ? 64 :
 	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_128 ? 128 :
+	 (rv.ctrl1 & HD_CTRL1_TSETTLE_FILTER_MASK) == HD_CTRL1_TSETTLE_FILTER_256 ? 256 :
 	 -1);
   printf("\n");
   printf("\n");
@@ -568,6 +566,26 @@ hdStatus(int pflag)
 
   return OK;
 }
+
+/**
+ * @ingroup Status
+ * @brief Return the firmware version of the module
+ *
+ * @return Firmware version if successful, otherwise ERROR
+ */
+int32_t
+hdGetFirmwareVersion()
+{
+  int32_t rval;
+  CHECKINIT;
+
+  HLOCK;
+  rval = vmeRead32(&hdp->version) & HD_VERSION_FIRMWARE_MASK;
+  HUNLOCK;
+
+  return rval;
+}
+
 
 /**
  * @ingroup Config
@@ -2227,6 +2245,7 @@ hdGetSlotNumber(uint32_t *slotnumber)
 }
 
 /**
+ * @ingroup Config
  * @brief Invert the helicity signal input and/or output
  * @param[in] fiber_input Invert Fiber input, if not 0
  * @param[in] cu_input Invert Copper input, if not 0
@@ -2254,6 +2273,7 @@ hdSetHelicityInversion(uint8_t fiber_input, uint8_t cu_input, uint8_t cu_output)
 }
 
 /**
+ * @ingroup Status
  * @brief Return the setting for helicity signal input and/or output inversion
  * @param[out] fiber_input Fiber input inverted, if not 0
  * @param[out] cu_input Copper input inverted, if not 0
@@ -2279,16 +2299,17 @@ hdGetHelicityInversion(uint8_t *fiber_input, uint8_t *cu_input, uint8_t *cu_outp
 }
 
 /**
+ * @ingroup Config
  * @brief Set the clock period for TSettle Filtering
  * @param[in] clock  clock period
  *     0   Disabled
  *     1   4 clock cycles
  *     2   8 clock cycles
  *     3   16 clock cycles
- *     4   24 clock cycles
- *     5   32 clock cycles
- *     6   64 clock cycles
- *     7   128 clock cycles
+ *     4   32 clock cycles
+ *     5   64 clock cycles
+ *     6   128 clock cycles
+ *     7   256 clock cycles
  * @return OK if successful, otherwise ERROR;
  */
 int32_t
@@ -2301,7 +2322,7 @@ hdSetTSettleFilter(uint8_t clock)
     {
       printf("%s: ERROR: Invalid clock %d (0x%x).  MAX = %d (0x%x)\n",
 	     __func__, clock, clock,
-	     HD_CTRL1_TSETTLE_FILTER_128, HD_CTRL1_TSETTLE_FILTER_128);
+	     HD_CTRL1_TSETTLE_FILTER_256, HD_CTRL1_TSETTLE_FILTER_256);
       return ERROR;
     }
 
@@ -2316,16 +2337,17 @@ hdSetTSettleFilter(uint8_t clock)
 }
 
 /**
+ * @ingroup Status
  * @brief Get the clock period for TSettle Filtering
  * @param[out] clock Description
  *     0   Disabled
  *     1   4 clock cycles
  *     2   8 clock cycles
  *     3   16 clock cycles
- *     4   24 clock cycles
- *     5   32 clock cycles
- *     6   64 clock cycles
- *     7   128 clock cycles
+ *     4   32 clock cycles
+ *     5   64 clock cycles
+ *     6   128 clock cycles
+ *     7   256 clock cycles
  * @return OK if successful, otherwise ERROR;
  */
 int32_t
@@ -2340,4 +2362,173 @@ hdGetTSettleFilter(uint8_t *clock)
 
   return rval;
 
+}
+
+/**
+ * @ingroup Config
+ * @brief Enable processed signals to helicity front panel outputs
+ * @param[in] enable
+ *      0   Disable
+ *     >0   Enable
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdSetProcessedOutput(int8_t enable)
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  if(enable)
+    vmeWrite32(&hdp->ctrl1,
+	       vmeRead32(&hdp->ctrl1) | HD_CTRL1_PROCESSED_TO_FP);
+  else
+    vmeWrite32(&hdp->ctrl1,
+	       vmeRead32(&hdp->ctrl1) & ~HD_CTRL1_PROCESSED_TO_FP);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Return state of processed signals to helicity front panel outputs
+ * @return 0 if disabled, 1 if enabled, otherwise ERROR
+ */
+int32_t
+hdGetProcessedOutput()
+{
+  int32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = (vmeRead32(&hdp->ctrl1) & HD_CTRL1_PROCESSED_TO_FP) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Configure test of helicity reporting delay of the helicity generator
+ * @param[in] pair_delay_selection
+ *     0   no delay
+ *     1   1 window delay
+ *     2   2 window delay
+ *     3   4 window delay
+ *     4   8 window delay
+ *     5   16 window delay
+ *     6   24 window delay
+ *     7   32 window delay
+ *     8   40 window delay
+ *     9   48 window delay
+ *    10   64 window delay
+ *    11   72 window delay
+ *    12   96 window delay
+ *    13   112 window delay
+ *    14   128 window delay
+ *    15   256 window delay
+ * @param[in] enable
+ *     0   Disable delay of PAIR_SYNC signal
+ *     1   Enable delay of PAIR_SYNC signal
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDelayTestSetup(uint8_t pair_delay_selection, int8_t enable)
+{
+  int32_t rval = 0;
+  uint32_t delay_enable = 0;
+  CHECKINIT;
+
+  if(pair_delay_selection > HD_DELAY_SETUP_SELECTION_MASK)
+    {
+      printf("%s: ERROR: Invalid pair_delay_selection (%d)\n",
+	     __func__, pair_delay_selection);
+      return ERROR;
+    }
+
+  delay_enable = enable ? HD_DELAY_SETUP_ENABLE : 0;
+
+  HLOCK;
+  vmeWrite32(&hdp->delay_setup, pair_delay_selection | delay_enable);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Summary
+ * @param[out] pair_delay_selection Description
+ *     0   no delay
+ *     1   1 window delay
+ *     2   2 window delay
+ *     3   4 window delay
+ *     4   8 window delay
+ *     5   16 window delay
+ *     6   24 window delay
+ *     7   32 window delay
+ *     8   40 window delay
+ *     9   48 window delay
+ *    10   64 window delay
+ *    11   72 window delay
+ *    12   96 window delay
+ *    13   112 window delay
+ *    14   128 window delay
+ *    15   256 window delay
+ * @param[out] enable Description
+ *     0   Disabled delay of PAIR_SYNC signal
+ *     1   Enabled delay of PAIR_SYNC signal
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdGetDelayTestSetup(uint8_t *pair_delay_selection, int8_t *enable)
+{
+  int32_t rval = 0;
+  uint32_t delay_setup = 0;
+  CHECKINIT;
+
+  HLOCK;
+  delay_setup = vmeRead32(&hdp->delay_setup);
+  *pair_delay_selection = delay_setup & HD_DELAY_SETUP_SELECTION_MASK;
+  *enable = (delay_setup & HD_DELAY_SETUP_ENABLE) ? 1 : 0;
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Status
+ * @brief Return Error Count from Helicity Delay Test
+ * @return Error count, if successful
+ */
+uint32_t
+hdGetDelayTestErrorCount()
+{
+  uint32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  rval = vmeRead32(&hdp->delay_error_count);
+  HUNLOCK;
+
+  return rval;
+}
+
+/**
+ * @ingroup Config
+ * @brief Reset the error count from the helicity delay test
+ * @return OK if successful, otherwise ERROR
+ */
+int32_t
+hdDelayTestErrorCountReset()
+{
+  uint32_t rval = 0;
+  CHECKINIT;
+
+  HLOCK;
+  vmeWrite32(&hdp->delay_error_count, HD_DELAY_ERROR_RESET);
+  HUNLOCK;
+
+  return rval;
 }

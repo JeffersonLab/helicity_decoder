@@ -71,54 +71,62 @@ main(int argc, char *argv[])
   hdEnable();
   hdSync(1);
   sleep(1);
-  hdTrig(1);
 
-  hdStatus(1);
-  int timeout=0;
-  while((hdBReady(0)!=1) && (timeout<100))
+  int ireadout = 0, nreads = 1000;
+  for(ireadout = 0; ireadout < nreads; ireadout++)
     {
-      timeout++;
+      hdTrig(0);
+
+      int timeout=0;
+      while((hdBReady(0)!=1) && (timeout<100))
+	{
+	  timeout++;
+	}
+
+      if(timeout>=100)
+	{
+	  printf("TIMEOUT!\n");
+	  goto CLOSE;
+	}
+
+      GETEVENT(vmeIN,1);
+
+      vmeDmaConfig(2,5,1);
+      dCnt = hdReadBlock(dma_dabufp, 1024>>2,1);
+      if(dCnt<=0)
+	{
+	  printf("No data or error.  dCnt = %d\n",dCnt);
+	}
+      else
+	{
+	  dma_dabufp += dCnt;
+	}
+
+      PUTEVENT(vmeOUT);
+
+      outEvent = dmaPGetItem(vmeOUT);
+
+      dCnt = outEvent->length;
+
+      if(ireadout == 0)
+	{
+	  printf("  dCnt = %d\n",dCnt);
+	  for(idata=0;idata<dCnt;idata++)
+	    {
+	      hdDecodeData(LSWAP(outEvent->data[idata]));
+	      /* if((idata%5)==0) printf("\n\t"); */
+	      /* printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata])); */
+	    }
+	  printf("\n\n");
+	}
+
+      dmaPFreeItem(outEvent);
     }
-
-  if(timeout>=100)
-    {
-      printf("TIMEOUT!\n");
-      goto CLOSE;
-    }
-
-  GETEVENT(vmeIN,1);
-
-  vmeDmaConfig(2,5,1);
-  dCnt = hdReadBlock(dma_dabufp, 1024>>2,1);
-  if(dCnt<=0)
-    {
-      printf("No data or error.  dCnt = %d\n",dCnt);
-    }
-  else
-    {
-      dma_dabufp += dCnt;
-    }
-
-  PUTEVENT(vmeOUT);
-
-  outEvent = dmaPGetItem(vmeOUT);
-
-  dCnt = outEvent->length;
-
-  printf("  dCnt = %d\n",dCnt);
-  for(idata=0;idata<dCnt;idata++)
-    {
-      hdDecodeData(LSWAP(outEvent->data[idata]));
-      /* if((idata%5)==0) printf("\n\t"); */
-      /* printf("  0x%08x ",(unsigned int)LSWAP(outEvent->data[idata])); */
-    }
-  printf("\n\n");
-
-  dmaPFreeItem(outEvent);
 
   hdDisable();
 
   hdStatus(1);
+  hdReset(2, 1);
 
  CLOSE:
 
