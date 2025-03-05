@@ -1,4 +1,4 @@
-#+TITLE: Driver library for the JLab Helicity Decoder
+#+TITLE: Library for the JLab Helicity Decoder
 
 Authors:
 - Bryan Moffit and Ed Jastrzembski
@@ -6,7 +6,7 @@ Authors:
 
 * What is this for?
 
-  This is the library for the JLab Helicity Decoder.  Use it with [[https://github.com/JeffersonLab/jvme][jvme]]
+  This is the library for configuration and readout of the JLab Helicity Decoder.  Use it with [[https://github.com/JeffersonLab/jvme][jvme]]
   to configure and readout a [[https://coda.jlab.org/drupal/system/files/pdfs/HardwareManual/HelicityDecoder/Programming%20the%20Helicity%20Decoder%20Module%20V5.pdf][JLab Helicity Decoder]] in a VME crate.
 
 * What do I do with it?
@@ -28,12 +28,27 @@ Authors:
   #+end_src
 
 *** ~hdStatus~ ~<optional address>~
-    Initialize the library and display the current status of the
-    helicity decoder at provided address, or default ~0xED0000~.
+Initialize the library and display the current status of the helicity decoder at provided address, or default ~0xED0000~.
     
 *** ~hdReadoutTest~ ~<optional address>~
-    Test readout of the helicity decoder with it's internal helicity
-    generator and internal trigger signals.
+Test readout of the helicity decoder with it's internal helicity generator and internal trigger signals.
+
+*** ~hdInit [options] <a24 address>~
+Initialize the helicity decoders signal sources (clock, trigger, syncreset) and helicity input type.
+#+begin_example
+ options:
+     -s [SIGNAL SOURCE]     Set the clock, syncreset, trigger source
+                               0 Internal (DEFAULT)
+                               1 Front Panel (1)
+                               2 VXS
+     -h [HELICITY SOURCE]   Set the input helicity signal source
+                               0 Internal
+                               1 External Fiber (DEFAULT)
+                               2 External Copper
+     -i                     Invert input polarity
+     -o                     Invert output polarity
+     -f                     'force', ignore firmware version
+#+end_example
 
 ** Add its configuration and readout to your readout list
    In ~rol/~ you'll find an example readout list (~hd_list.c~) that
@@ -49,9 +64,3 @@ Authors:
 
    - Add it to your COOL configuration with filename ~hd_list.so~.
   
-
-* Is there anything else planned?
-
-  - doxygen documentation on github pages
-  - configuration file
-    
