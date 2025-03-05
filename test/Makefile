@@ -37,8 +37,10 @@ ifeq ($(DEBUG),1)
 endif
 
 SRC			= $(wildcard *.c)
-DEPS			= $(SRC:.c=.d)
 PROGS			= $(SRC:.c=)
+DEPDIR 			:= .deps
+DEPFLAGS 		= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+DEPFILES 		:= $(SRC:%.c=$(DEPDIR)/%.d)
 
 all: $(PROGS)
 
@@ -46,24 +48,21 @@ clean distclean:
 	@rm -f $(PROGS) *~ $(OBJS) $(DEPS)
 
 %: %.c
+%: %.c $(DEPDIR)/%.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS) $(INCS) -o $@ $<
+	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
-hdTestVXS: hdTestVXS.c
+hdTestVXS: hdTestVXS.c $(DEPDIR)/hdTestVXS.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
+	${Q}$(CC) -MT $@ -MMD -MP -MF $(DEPDIR)/hdTestVXS.d $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
 
-hdReadoutTest: hdReadoutTest.c
+hdReadoutTest: hdReadoutTest.c $(DEPDIR)/hdReadoutTest.d | $(DEPDIR)
 	@echo " CC     $@"
-	${Q}$(CC) $(CFLAGS)  -lti -lsd -lts -lstdc++ -lgsl -lgslTimer $(INCS) -o $@ $<
+	${Q}$(CC) -MT $@ -MMD -MP -MF $(DEPDIR)/hdReadoutTest.d $(CFLAGS)  -lti -lsd -lts -lstdc++ $(INCS) -o $@ $<
 
-%.d: %.c
-	@echo " DEP    $@"
-	@set -e; rm -f $@; \
-	$(CC) -MM -shared $(INCS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
+$(DEPDIR): ; @mkdir -p $@
 
--include $(DEPS)
+$(DEPFILES):
+include $(wildcard $(DEPFILES))
 
 .PHONY: all clean distclean

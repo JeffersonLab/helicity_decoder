@@ -17,7 +17,6 @@
 #include "jvme.h"
 #include "dmaPList.h"
 #include "hdLib.h"
-#include "gslTimerLib.h"
 
 int
 main(int argc, char *argv[])
@@ -42,18 +41,6 @@ main(int argc, char *argv[])
 
   printf("\n %s: address = 0x%08x\n", argv[0], address);
   printf("----------------------------\n");
-
-  /* Create the gslTimer object */
-  gslTimer_t gt;
-
-  uint32_t ntimers = 10;
-  uint32_t min_time = 0;
-  uint32_t max_time = 100000;
-  uint32_t bin_size = 10;
-
-  /* Initialize gslTimer */
-  gslTimerInit(ntimers, min_time, max_time, bin_size, &gt);
-
 
   stat = vmeOpenDefaultWindows();
   if(stat != OK)
@@ -88,16 +75,13 @@ main(int argc, char *argv[])
   int ireadout = 0, nreads = 1000;
   for(ireadout = 0; ireadout < nreads; ireadout++)
     {
-      gslTimerStartTime(&gt);     // Start Time
       hdTrig(0);
 
       int timeout=0;
-      gslTimerRecordTime(&gt);
       while((hdBReady(0)!=1) && (timeout<100))
 	{
 	  timeout++;
 	}
-      gslTimerRecordTime(&gt);
 
       if(timeout>=100)
 	{
@@ -108,9 +92,7 @@ main(int argc, char *argv[])
       GETEVENT(vmeIN,1);
 
       vmeDmaConfig(2,5,1);
-      gslTimerRecordTime(&gt);
       dCnt = hdReadBlock(dma_dabufp, 1024>>2,1);
-      gslTimerRecordTime(&gt);
       if(dCnt<=0)
 	{
 	  printf("No data or error.  dCnt = %d\n",dCnt);
@@ -121,7 +103,6 @@ main(int argc, char *argv[])
 	}
 
       PUTEVENT(vmeOUT);
-      gslTimerEndTime(&gt);
 
       outEvent = dmaPGetItem(vmeOUT);
 
@@ -146,10 +127,6 @@ main(int argc, char *argv[])
 
   hdStatus(1);
   hdReset(2, 1);
-  gslTimerPrintStats(&gt);
-
-  /* Free all memory allocated by the library */
-  gslTimerFree(&gt);
 
  CLOSE:
 
