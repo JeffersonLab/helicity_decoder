@@ -52,10 +52,6 @@ clean distclean:
 	@echo " CC     $@"
 	${Q}$(CC) $(DEPFLAGS) $(CFLAGS) $(INCS) -o $@ $<
 
-hdTestVXS: hdTestVXS.c $(DEPDIR)/hdTestVXS.d | $(DEPDIR)
-	@echo " CC     $@"
-	${Q}$(CC) -MT $@ -MMD -MP -MF $(DEPDIR)/hdTestVXS.d $(CFLAGS)  -lti -lsd -lts -lstdc++ -lreadline $(INCS) -o $@ $<
-
 hdReadoutTest: hdReadoutTest.c $(DEPDIR)/hdReadoutTest.d | $(DEPDIR)
 	@echo " CC     $@"
 	${Q}$(CC) -MT $@ -MMD -MP -MF $(DEPDIR)/hdReadoutTest.d $(CFLAGS)  -lti -lsd -lts -lstdc++ $(INCS) -o $@ $<
