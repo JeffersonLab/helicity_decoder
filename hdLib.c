@@ -167,10 +167,8 @@ hdInit(uint32_t vAddr, uint8_t source, uint8_t helSignalSrc, uint32_t iFlag)
       vAddr = vAddr << 19;
     }
 
-  if(iFlag&HD_INIT_NO_INIT)
-    {
-      noBoardInit = 1;
-    }
+  noBoardInit = (iFlag & HD_INIT_NO_INIT) ? 1 : 0;
+  noFirmwareCheck = (iFlag & HD_INIT_IGNORE_FIRMWARE) ? 1 : 0;
 
   stat = vmeBusToLocalAdrs(0x39, (char *)(uintptr_t)vAddr, (char **) &laddr);
   if (stat != 0)
