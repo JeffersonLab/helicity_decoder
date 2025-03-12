@@ -26,7 +26,7 @@ main(int argc, char *argv[])
   int iflag=0, stat=0;
   int inputchar=10;
   unsigned int hd_address=0;
-  char *rbf_filename;
+  char *rpd_filename;
 
   printf("\nJLAB Helicity Decoder Firmware Update\n");
   printf("----------------------------\n");
@@ -45,7 +45,7 @@ main(int argc, char *argv[])
       hd_address = (unsigned int) strtoll(argv[2],NULL,16)&0xffffffff;
     }
 
-  stat = hdFirmwareReadFile(rbf_filename);
+  stat = hdFirmwareReadFile(rpdf_filename);
   if(stat != OK)
     exit(-1);
 
@@ -119,7 +119,7 @@ void
 Usage()
 {
   printf("\n");
-  printf("%s <firmware rbf file> <f1TDC VME ADDRESS>\n",progName);
+  printf("%s <firmware rpd file> <helicity decoder VME ADDRESS>\n",progName);
   printf("\n");
 
 }
