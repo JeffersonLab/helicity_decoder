@@ -13,6 +13,7 @@
 #include "hdFirmwareTools.h"
 
 #include <stdlib.h>
+#include <pthread.h>
 
 extern pthread_mutex_t hdMutex;
 #define HLOCK   if(pthread_mutex_lock(&hdMutex)<0) perror("pthread_mutex_lock");

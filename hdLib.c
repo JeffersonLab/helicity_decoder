@@ -718,16 +718,19 @@ hdGetA32()
  *
  * @param clkSrc Clock Source
  *      0 Internal
- *      1 Front Panel
+ *      1 Front Panel - LVDS
  *      2 VXS
+ *      3 Front Panel - ECL
  * @param trigSrc Trigger Source
  *      0 Internal
- *      1 Front Panel
+ *      1 Front Panel - LVDS
  *      2 VXS
+ *      3 Front Panel - ECL
  * @param srSrc SyncReset Source
  *      0 Internal
- *      1 Front Panel
+ *      1 Front Panel - LVDS
  *      2 VXS
+ *      3 Front Panel - ECL
  *
  * @return OK if successful, otherwise ERROR
  */
@@ -755,6 +758,10 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
       wreg = HD_CTRL1_CLK_SRC_P0;
       break;
 
+    case HD_INIT_FP_ECL:
+      wreg = HD_CTRL1_CLK_SRC_FP2;
+      break;
+
     default:
       wreg = HD_CTRL1_CLK_SRC_INT;
       printf("%s: Invalid source (%d).  Clock source set to Internal\n",
@@ -776,6 +783,10 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
       wreg |= HD_CTRL1_TRIG_SRC_P0;
       break;
 
+    case HD_INIT_FP_ECL:
+      wreg |= HD_CTRL1_TRIG_SRC_FP2;
+      break;
+
     default:
       wreg |= HD_CTRL1_TRIG_SRC_SOFT | HD_CTRL1_SOFT_CONTROL_ENABLE;
       printf("%s: Invalid source (%d).  Trigger source set to Internal\n",
@@ -795,6 +806,10 @@ hdSetSignalSources(uint8_t clkSrc, uint8_t trigSrc, uint8_t srSrc)
 
     case HD_INIT_VXS:
       wreg |= HD_CTRL1_SYNC_RESET_SRC_P0;
+      break;
+
+    case HD_INIT_FP_ECL:
+      wreg |= HD_CTRL1_SYNC_RESET_SRC_FP2;
       break;
 
     default:
@@ -857,6 +872,10 @@ hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc)
       *clkSrc = HD_INIT_FP;
       break;
 
+    case HD_CTRL1_CLK_SRC_FP2:
+      *clkSrc = HD_INIT_FP_ECL;
+      break;
+
     case HD_CTRL1_CLK_SRC_INT:
     default:
       *clkSrc = HD_INIT_INTERNAL;
@@ -874,6 +893,10 @@ hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc)
       *trigSrc = HD_INIT_FP;
       break;
 
+    case HD_CTRL1_TRIG_SRC_FP2:
+      *trigSrc = HD_INIT_FP_ECL;
+      break;
+
     case HD_CTRL1_TRIG_SRC_SOFT:
     default:
       *trigSrc = HD_INIT_INTERNAL;
@@ -889,6 +912,10 @@ hdGetSignalSources(uint8_t *clkSrc, uint8_t *trigSrc, uint8_t *srSrc)
 
     case HD_CTRL1_SYNC_RESET_SRC_FP:
       *srSrc = HD_INIT_FP;
+      break;
+
+    case HD_CTRL1_SYNC_RESET_SRC_FP2:
+      *srSrc = HD_INIT_FP_ECL;
       break;
 
     case HD_CTRL1_SYNC_RESET_SRC_SOFT:

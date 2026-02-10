@@ -227,6 +227,8 @@ typedef struct hd_struct
 #define HD_INIT_INTERNAL        0
 #define HD_INIT_FP              1
 #define HD_INIT_VXS             2
+#define HD_INIT_FP_ECL          3
+#define HD_INIT_FP_LVDS         1
 #define HD_INIT_INTERNAL_HELICITY  0
 #define HD_INIT_EXTERNAL_FIBER     1
 #define HD_INIT_EXTERNAL_COPPER    2
